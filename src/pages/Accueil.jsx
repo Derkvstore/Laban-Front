@@ -41,11 +41,20 @@ const Accueil = ({ user, currentTime }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
+
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      // Utilisation de la variable d'environnement VITE_API_URL
-      const API_URL = import.meta.env.VITE_API_URL;
+      // Ajoutez une vérification pour vous assurer que le token existe
+      if (!token) {
+        setError("Token non trouvé. Veuillez vous reconnecter.");
+        setIsLoading(false);
+        return;
+      }
+
       const response = await axios.get(`${API_URL}/api/rapports/totals`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -64,7 +73,9 @@ const Accueil = ({ user, currentTime }) => {
     fetchDashboardData();
   }, []);
 
+  // Ajoutez cette vérification pour vous assurer que currentTime est défini
   const getGreeting = () => {
+    if (!currentTime) return 'Bonjour';
     const hour = currentTime.getHours();
     if (hour < 12) return 'Bonjour';
     if (hour < 18) return 'Bon après-midi';
@@ -72,10 +83,12 @@ const Accueil = ({ user, currentTime }) => {
   };
 
   const getDayAndDate = () => {
+    if (!currentTime) return '';
     return currentTime.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   };
   
   const getHour = () => {
+    if (!currentTime) return '';
     return currentTime.toLocaleTimeString('fr-FR');
   };
 
@@ -85,6 +98,11 @@ const Accueil = ({ user, currentTime }) => {
   const animatedRetours = useCountUp(dashboardData.retours);
   const animatedMobilesVendus = useCountUp(dashboardData.mobilesVendus);
   const animatedAccessoires = useCountUp(dashboardData.accessoires);
+
+  // Vérifiez si user et currentTime sont définis avant de rendre le contenu
+  if (!user || !currentTime) {
+      return <div>Chargement...</div>;
+  }
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg transition-all duration-300">
