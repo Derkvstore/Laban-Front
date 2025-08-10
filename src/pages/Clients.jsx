@@ -22,6 +22,8 @@ const Clients = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingClient, setEditingClient] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [clientIdToDelete, setClientIdToDelete] = useState(null);
 
   // Utilisation de la variable d'environnement VITE_API_URL
   const API_URL = import.meta.env.VITE_API_URL;
@@ -121,10 +123,15 @@ const Clients = () => {
     });
   };
 
-  const handleDelete = async (id) => {
+  const handleDelete = (id) => {
+    setClientIdToDelete(id);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`${API_URL}/api/clients/${id}`, {
+      await axios.delete(`${API_URL}/api/clients/${clientIdToDelete}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -134,7 +141,15 @@ const Clients = () => {
     } catch (err) {
       setError('Erreur lors de la suppression du client.');
       console.error(err);
+    } finally {
+      setShowDeleteModal(false);
+      setClientIdToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setClientIdToDelete(null);
   };
 
   const formatDate = (dateString) => {
@@ -291,6 +306,29 @@ const Clients = () => {
           )}
         </div>
       </div>
+      {/* Modale de confirmation de suppression */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="relative p-8 bg-white rounded-xl shadow-lg max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirmer la suppression</h3>
+            <p className="text-gray-600 mb-6">Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={cancelDelete}
+                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
