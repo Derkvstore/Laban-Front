@@ -8,18 +8,21 @@ const Dettes = () => {
   const [error, setError] = useState('');
   const [totalDues, setTotalDues] = useState(0); // Nouvel état pour le solde total
   
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchDettes = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/dettes', {
+      const response = await axios.get(`${API_URL}/api/dettes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
       const dettesWithItems = await Promise.all(response.data.map(async (dette) => {
-          const itemsResponse = await axios.get(`http://localhost:3000/api/vente_items/vente/${dette.id}`, {
+          const itemsResponse = await axios.get(`${API_URL}/api/vente_items/vente/${dette.id}`, {
               headers: { 'Authorization': `Bearer ${token}` }
           });
           return { ...dette, vente_items: itemsResponse.data };
@@ -85,16 +88,16 @@ const Dettes = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Section Dettes</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Section Dettes</h1>
         
-        <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <div className="flex justify-between items-center mb-4">
-            {/* <h2 className="text-xl font-semibold">
-              LISTE DES DETTES {new Date().toLocaleDateString('fr-FR')}
-            </h2> */}
-            <div className="flex items-center space-x-4">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+            <h2 className="text-xl font-semibold mb-2 sm:mb-0 text-gray-800 hidden-for-print">
+              LISTE DES DETTES du {new Date().toLocaleDateString('fr-FR')}
+            </h2>
+            <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 items-start sm:items-center">
               <span className="text-sm font-semibold hidden-for-print">
                 Total restant à payer : <span className="text-red-500">{formatPrice(totalDues)}</span>
               </span>
@@ -117,44 +120,56 @@ const Dettes = () => {
                 <h1 className="text-2xl font-bold mb-2">LISTE LABAN SERVICE {new Date().toLocaleDateString('fr-FR')}</h1>
                 <hr className="my-4"/>
               </div>
+              <style>
+                {`
+                  @media print {
+                    .hidden-for-print { display: none !important; }
+                    body { -webkit-print-color-adjust: exact; }
+                    h1 { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; }
+                    table { width: 100%; border-collapse: collapse; }
+                    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                    thead { background-color: #f3f4f6; }
+                  }
+                `}
+              </style>
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unit.</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant payé</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à payer</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date de sortie</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Article</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unit.</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant payé</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à payer</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date de sortie</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {dettes.map((dette) => (
                     <tr key={dette.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{dette.client_nom}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{dette.client_nom}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {dette.vente_items && dette.vente_items.length > 0 ? (
                           getArticleDetails(dette.vente_items)
                         ) : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {dette.vente_items && dette.vente_items.length > 0 ? (
                           dette.vente_items[0].quantite_vendue
                         ) : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {dette.vente_items && dette.vente_items.length > 0 ? (
                           formatPrice(dette.vente_items[0].prix_unitaire_negocie)
                         ) : 'N/A'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(dette.montant_paye)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(dette.montant_paye)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500">
                         {formatPrice(dette.montant_restant)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(dette.date_vente)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPhoneNumber(dette.client_telephone)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(dette.date_vente)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPhoneNumber(dette.client_telephone)}</td>
                     </tr>
                   ))}
                 </tbody>

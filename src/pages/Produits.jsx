@@ -38,6 +38,12 @@ const Produits = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingProduct, setEditingProduct] = useState(null);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
+
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
 
   const formatPrice = (value) => {
     if (!value) return '';
@@ -55,7 +61,7 @@ const Produits = () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/products', {
+      const response = await axios.get(`${API_URL}/api/products`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -72,7 +78,7 @@ const Produits = () => {
   const fetchFournisseurs = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/fournisseurs', {
+      const response = await axios.get(`${API_URL}/api/fournisseurs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -113,8 +119,8 @@ const Produits = () => {
     setSuccess('');
 
     const url = editingProduct
-      ? `http://localhost:3000/api/products/${editingProduct.id}`
-      : 'http://localhost:3000/api/products';
+      ? `${API_URL}/api/products/${editingProduct.id}`
+      : `${API_URL}/api/products`;
     const method = editingProduct ? 'put' : 'post';
     
     const cleanedFormData = {
@@ -170,23 +176,35 @@ const Produits = () => {
   };
 
   const handleDelete = async (id) => {
-    const isConfirmed = window.confirm('Êtes-vous sûr de vouloir supprimer ce produit ?');
-    if (isConfirmed) {
-      try {
-        const token = localStorage.getItem('token');
-        await axios.delete(`http://localhost:3000/api/products/${id}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        fetchProducts();
-        setSuccess('Produit supprimé avec succès !');
-      } catch (err) {
-        setError('Erreur lors de la suppression du produit.');
-        console.error(err);
-      }
+    // Affiche la modale de confirmation au lieu de window.confirm
+    setProductToDelete(id);
+    setIsConfirmingDelete(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_URL}/api/products/${productToDelete}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      fetchProducts();
+      setSuccess('Produit supprimé avec succès !');
+    } catch (err) {
+      setError('Erreur lors de la suppression du produit.');
+      console.error(err);
+    } finally {
+      setIsConfirmingDelete(false);
+      setProductToDelete(null);
     }
   };
+
+  const cancelDelete = () => {
+    setIsConfirmingDelete(false);
+    setProductToDelete(null);
+  };
+
 
   const formatDate = (dateString) => {
     const date = new Date(dateString);
@@ -206,15 +224,15 @@ const Produits = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Gestion des Produits</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Produits</h1>
 
         {/* Formulaire d'ajout/édition */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg mb-8">
-          <h2 className="text-xl font-semibold mb-4">{editingProduct ? 'Modifier un produit' : 'Ajouter un nouveau produit'}</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">{editingProduct ? 'Modifier un produit' : 'Ajouter un nouveau produit'}</h2>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <input list="marques" type="text" name="marque" placeholder="Marque" value={formData.marque} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
               <datalist id="marques">
                 {MARQUES.map((marque) => <option key={marque} value={marque} />)}
@@ -245,35 +263,37 @@ const Produits = () => {
             </div>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
-            <button
-              type="submit"
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
-              disabled={isFormLoading}
-            >
-              {isFormLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaPlus className="mr-2" />}
-              {editingProduct ? 'Modifier le produit' : 'Ajouter le produit'}
-            </button>
-            {editingProduct && (
+            <div className="flex items-center">
               <button
-                type="button"
-                onClick={() => {
-                  setEditingProduct(null);
-                  setFormData({
-                    marque: '', modele: '', stockage: '', type: '', quantite_en_stock: '',
-                    prix_achat: '', prix_vente_suggere: '', fournisseur_id: '', type_carton: '',
-                  });
-                }}
-                className="ml-4 px-6 py-3 bg-gray-400 text-white font-semibold rounded-xl hover:bg-gray-500 transition duration-200"
+                type="submit"
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
+                disabled={isFormLoading}
               >
-                Annuler
+                {isFormLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaPlus className="mr-2" />}
+                {editingProduct ? 'Modifier le produit' : 'Ajouter le produit'}
               </button>
-            )}
+              {editingProduct && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingProduct(null);
+                    setFormData({
+                      marque: '', modele: '', stockage: '', type: '', quantite_en_stock: '',
+                      prix_achat: '', prix_vente_suggere: '', fournisseur_id: '', type_carton: '',
+                    });
+                  }}
+                  className="ml-4 px-6 py-3 bg-gray-400 text-white font-semibold rounded-xl hover:bg-gray-500 transition duration-200"
+                >
+                  Annuler
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
         {/* Tableau d'affichage des produits */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Liste des Produits</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Liste des Produits</h2>
           {isLoading ? (
             <div className="flex justify-center items-center h-40">
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
@@ -283,31 +303,31 @@ const Produits = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Marque
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Modèle
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stockage
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stock
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Prix Achat 
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Prix Vente Suggéré 
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Fournisseur
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -315,15 +335,15 @@ const Produits = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {products.map((product) => (
                     <tr key={product.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.marque}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.modele}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stockage}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantite_en_stock}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.prix_achat)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.prix_vente_suggere)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFournisseurName(product.fournisseur_id)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.marque}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.modele}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.stockage}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.type}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.quantite_en_stock}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.prix_achat)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.prix_vente_suggere)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFournisseurName(product.fournisseur_id)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
                         <button
                           onClick={() => handleEdit(product)}
                           className="text-blue-600 hover:text-blue-900 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100"
@@ -345,6 +365,29 @@ const Produits = () => {
           )}
         </div>
       </div>
+      {/* Modale de confirmation de suppression */}
+      {isConfirmingDelete && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
+          <div className="relative p-8 bg-white rounded-xl shadow-lg max-w-md w-full">
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirmer la suppression</h3>
+            <p className="text-gray-600 mb-6">Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.</p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={cancelDelete}
+                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

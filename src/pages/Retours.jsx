@@ -8,6 +8,9 @@ const Retours = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchRetours = async () => {
     setIsLoading(true);
     try {
@@ -15,13 +18,13 @@ const Retours = () => {
       if (!token) {
         throw new Error("Token non trouvé. Veuillez vous reconnecter.");
       }
-      const response = await axios.get('http://localhost:3000/api/defective_returns', {
+      const response = await axios.get(`${API_URL}/api/defective_returns`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      const clientsResponse = await axios.get('http://localhost:3000/api/clients', {
+      const clientsResponse = await axios.get(`${API_URL}/api/clients`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -59,12 +62,12 @@ const Retours = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Section Retours Mobiles</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Section Retours Mobiles</h1>
         
-        <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Liste des Retours</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Liste des Retours</h2>
           {isLoading ? (
             <div className="flex justify-center items-center h-40">
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
@@ -74,28 +77,28 @@ const Retours = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Client
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Marque
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Modèle
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Stockage
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Quantité 
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Defaut
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <FaCalendarAlt className="inline-block mr-1" /> Date 
                     </th>
                   </tr>
@@ -103,14 +106,14 @@ const Retours = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {retours.map((retour) => (
                     <tr key={retour.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getClientName(retour.client_id)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{retour.marque}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.modele}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.stockage}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.type}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.quantite_retournee}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.reason}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getClientName(retour.client_id)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{retour.marque}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.modele}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.stockage}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.type}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.quantite_retournee}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{retour.reason}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {formatDate(retour.return_date)}<br />{formatTime(retour.return_date)}
                       </td>
                     </tr>

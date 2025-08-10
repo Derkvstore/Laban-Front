@@ -10,11 +10,14 @@ const Factures = () => {
   const [error, setError] = useState('');
   const [selectedVente, setSelectedVente] = useState(null);
 
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchFactures = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/factures', {
+      const response = await axios.get(`${API_URL}/api/factures`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -31,7 +34,7 @@ const Factures = () => {
   const fetchVentesForFacture = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/ventes', {
+      const response = await axios.get(`${API_URL}/api/ventes`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -62,7 +65,7 @@ const Factures = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/factures', {
+      await axios.post(`${API_URL}/api/factures`, {
         vente_id: selectedVente.id,
         numero_facture: `FACT-${Date.now()}` // Génère un numéro de facture unique
       }, {
@@ -100,13 +103,13 @@ const Factures = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Gestion des Factures</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Factures</h1>
 
         {/* Formulaire de création de facture */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg mb-8">
-          <h2 className="text-xl font-semibold mb-4">Créer une nouvelle facture</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Créer une nouvelle facture</h2>
           <form onSubmit={handleCreateFacture}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <select
@@ -133,9 +136,9 @@ const Factures = () => {
         </div>
 
         {/* Tableau des factures */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold">Liste des Factures</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-0 text-gray-800">Liste des Factures</h2>
             <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center">
               <FaPrint className="mr-2" /> Imprimer la liste
             </button>
@@ -149,25 +152,25 @@ const Factures = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Numéro de facture
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Vente ID
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date de facture
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Montant original
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Montant payé
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Statut
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -175,13 +178,13 @@ const Factures = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {factures.map((facture) => (
                     <tr key={facture.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{facture.numero_facture}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{facture.vente_id}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(facture.date_facture)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(facture.montant_original_facture)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(facture.montant_paye_facture)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{facture.statut_facture}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{facture.numero_facture}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{facture.vente_id}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(facture.date_facture)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(facture.montant_original_facture)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(facture.montant_paye_facture)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{facture.statut_facture}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
                         {/* Ajoutez les boutons d'action ici */}
                       </td>
                     </tr>

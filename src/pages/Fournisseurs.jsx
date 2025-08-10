@@ -15,11 +15,14 @@ const Fournisseurs = () => {
   const [success, setSuccess] = useState('');
   const [editingFournisseur, setEditingFournisseur] = useState(null);
 
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchFournisseurs = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/fournisseurs', {
+      const response = await axios.get(`${API_URL}/api/fournisseurs`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -63,8 +66,8 @@ const Fournisseurs = () => {
     setSuccess('');
 
     const url = editingFournisseur 
-      ? `http://localhost:3000/api/fournisseurs/${editingFournisseur.id}` 
-      : 'http://localhost:3000/api/fournisseurs';
+      ? `${API_URL}/api/fournisseurs/${editingFournisseur.id}`
+      : `${API_URL}/api/fournisseurs`;
     const method = editingFournisseur ? 'put' : 'post';
     
     const cleanedFormData = {
@@ -107,7 +110,7 @@ const Fournisseurs = () => {
   const handleDelete = async (id) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.delete(`http://localhost:3000/api/fournisseurs/${id}`, {
+      await axios.delete(`${API_URL}/api/fournisseurs/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -143,15 +146,15 @@ const Fournisseurs = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Gestion des Fournisseurs</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Fournisseurs</h1>
 
         {/* Formulaire d'ajout/édition */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg mb-8">
-          <h2 className="text-xl font-semibold mb-4">{editingFournisseur ? 'Modifier un fournisseur' : 'Ajouter un nouveau fournisseur'}</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">{editingFournisseur ? 'Modifier un fournisseur' : 'Ajouter un nouveau fournisseur'}</h2>
           <form onSubmit={handleSubmit}>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mb-4">
               <input
                 type="text"
                 name="nom"
@@ -180,32 +183,34 @@ const Fournisseurs = () => {
             </div>
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
-            <button
-              type="submit"
-              className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
-              disabled={isFormLoading}
-            >
-              {isFormLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaPlus className="mr-2" />}
-              {editingFournisseur ? 'Modifier le fournisseur' : 'Ajouter le fournisseur'}
-            </button>
-            {editingFournisseur && (
+            <div className="flex items-center">
               <button
-                type="button"
-                onClick={() => {
-                  setEditingFournisseur(null);
-                  setFormData({ nom: '', telephone: '', adresse: '' });
-                }}
-                className="ml-4 px-6 py-3 bg-gray-400 text-white font-semibold rounded-xl hover:bg-gray-500 transition duration-200"
+                type="submit"
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
+                disabled={isFormLoading}
               >
-                Annuler
+                {isFormLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaPlus className="mr-2" />}
+                {editingFournisseur ? 'Modifier le fournisseur' : 'Ajouter le fournisseur'}
               </button>
-            )}
+              {editingFournisseur && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingFournisseur(null);
+                    setFormData({ nom: '', telephone: '', adresse: '' });
+                  }}
+                  className="ml-4 px-6 py-3 bg-gray-400 text-white font-semibold rounded-xl hover:bg-gray-500 transition duration-200"
+                >
+                  Annuler
+                </button>
+              )}
+            </div>
           </form>
         </div>
 
         {/* Tableau d'affichage des fournisseurs */}
-        <div className="bg-white p-6 rounded-2xl shadow-lg">
-          <h2 className="text-xl font-semibold mb-4">Liste des Fournisseurs</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Liste des Fournisseurs</h2>
           {isLoading ? (
             <div className="flex justify-center items-center h-40">
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
@@ -215,22 +220,22 @@ const Fournisseurs = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Nom
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Téléphone
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Adresse
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <FaCalendarAlt className="inline-block mr-1" /> Date
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       <FaClock className="inline-block mr-1" /> Heure
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -238,12 +243,12 @@ const Fournisseurs = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {fournisseurs.map((fournisseur) => (
                     <tr key={fournisseur.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{fournisseur.nom}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPhoneNumber(fournisseur.telephone)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fournisseur.adresse}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fournisseur.date_ajout)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(fournisseur.date_ajout)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{fournisseur.nom}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPhoneNumber(fournisseur.telephone)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{fournisseur.adresse}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(fournisseur.date_ajout)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatTime(fournisseur.date_ajout)}</td>
+                      <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button
                           onClick={() => handleEdit(fournisseur)}
                           className="text-blue-600 hover:text-blue-900 transition-colors duration-200"

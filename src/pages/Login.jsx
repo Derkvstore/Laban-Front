@@ -1,102 +1,144 @@
-    import React, { useState } from 'react';
-    import axios from 'axios';
-    import { useNavigate } from 'react-router-dom';
-    import { FaApple, FaSpinner, FaEye, FaEyeSlash } from 'react-icons/fa'; // Import des icônes
+import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
+import { FaRegCalendarAlt, FaRegClock, FaBoxOpen, FaTruck, FaUndoAlt, FaMobileAlt, FaSpinner, FaHeadphones } from 'react-icons/fa';
 
-    const Login = () => {
-      const [username, setUsername] = useState('');
-      const [password, setPassword] = useState('');
-      const [error, setError] = useState('');
-      const [isLoading, setIsLoading] = useState(false);
-      const [showPassword, setShowPassword] = useState(false); // Nouvel état pour afficher/masquer le mot de passe
-      const navigate = useNavigate();
+// Hook personnalisé pour l'animation de comptage
+const useCountUp = (endValue, duration = 2000) => {
+  const [count, setCount] = useState(0);
+  const ref = useRef(0);
 
-      const handleLogin = async (e) => {
-        e.preventDefault();
-        setIsLoading(true);
-        setError('');
-        try {
-          // Utilisez la variable d'environnement pour l'URL de l'API
-          const API_URL = import.meta.env.VITE_API_URL;
-          const response = await axios.post(`${API_URL}/api/auth/login`, {
-            username,
-            password,
-          });
-          localStorage.setItem('token', response.data.token);
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          navigate('/dashboard');
-        } catch (err) {
-          setError('Nom d\'utilisateur ou mot de passe incorrect.');
-        } finally {
-          setIsLoading(false);
+  const startCount = () => {
+    let startTime;
+    const animate = (timestamp) => {
+      if (!startTime) startTime = timestamp;
+      const progress = timestamp - startTime;
+      const percentage = Math.min(progress / duration, 1);
+      ref.current = percentage * endValue;
+      setCount(Math.round(ref.current));
+      if (progress < duration) {
+        requestAnimationFrame(animate);
+      }
+    };
+    requestAnimationFrame(animate);
+  };
+  
+  useEffect(() => {
+    startCount();
+  }, [endValue, duration]);
+
+  return count;
+};
+
+
+const Accueil = ({ user, currentTime }) => {
+  const [dashboardData, setDashboardData] = useState({
+    cartons: 0,
+    arrivages: 0,
+    retours: 0,
+    mobilesVendus: 0,
+    accessoires: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const fetchDashboardData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      // Utilisation de la variable d'environnement VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL;
+      const response = await axios.get(`${API_URL}/api/rapports/totals`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
         }
-      };
+      });
+      setDashboardData(response.data);
+    } catch (err) {
+      setError("Erreur lors de la récupération des données du tableau de bord.");
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-      const togglePasswordVisibility = () => {
-        setShowPassword(!showPassword);
-      };
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
 
-      return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 font-sans antialiased text-gray-900">
-          <div className="w-full max-w-lg p-10 bg-white rounded-xl shadow-2xl">
-            <div className="flex flex-col items-center">
-              <FaApple className="text-5xl text-gray-900 mb-4" />
-              <h1 className="text-4xl font-semibold mb-2 text-gray-900">Wassolo Service</h1>
-              <p className="text-xl text-gray-500">Connectez-vous à votre compte</p>
-            </div>
-            <form onSubmit={handleLogin} className="mt-10">
-              <div className="mb-6">
-                <input
-                  type="text"
-                  placeholder="Nom d'utilisateur"
-                  className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-lg"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="mb-8 relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Mot de passe"
-                  className="w-full px-5 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-lg pr-12"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
-                  onClick={togglePasswordVisibility}
-                >
-                  {showPassword ? (
-                    <FaEyeSlash className="h-6 w-6" />
-                  ) : (
-                    <FaEye className="h-6 w-6" />
-                  )}
-                </button>
-              </div>
-              {error && (
-                <div className="mb-6 text-red-500 text-sm text-center">
-                  {error}
-                </div>
-              )}
-              <button
-                type="submit"
-                className="w-full px-5 py-4 bg-blue-500 text-white font-semibold rounded-xl hover:bg-blue-600 transition duration-200 flex items-center justify-center text-xl"
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <FaSpinner className="animate-spin mr-2" />
-                ) : (
-                  'Connexion'
-                )}
-              </button>
-            </form>
+  const getGreeting = () => {
+    const hour = currentTime.getHours();
+    if (hour < 12) return 'Bonjour';
+    if (hour < 18) return 'Bon après-midi';
+    return 'Bonsoir';
+  };
+
+  const getDayAndDate = () => {
+    return currentTime.toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  };
+  
+  const getHour = () => {
+    return currentTime.toLocaleTimeString('fr-FR');
+  };
+
+  // Utilisation du hook d'animation pour chaque valeur
+  const animatedCartons = useCountUp(dashboardData.cartons);
+  const animatedArrivages = useCountUp(dashboardData.arrivages);
+  const animatedRetours = useCountUp(dashboardData.retours);
+  const animatedMobilesVendus = useCountUp(dashboardData.mobilesVendus);
+  const animatedAccessoires = useCountUp(dashboardData.accessoires);
+
+  return (
+    <div className="bg-white p-8 rounded-2xl shadow-lg transition-all duration-300">
+      <div className="flex justify-between items-center mb-8">
+        <div className="flex items-center">
+          <h2 className="text-3xl font-semibold">{getGreeting()}, {user.fullName || user.username} !</h2>
+          <span className="ml-2 text-3xl">👋</span>
+        </div>
+        <div className="flex space-x-4">
+          <div className="flex items-center px-4 py-2 bg-gray-100 rounded-xl">
+            <FaRegCalendarAlt className="mr-2 text-blue-500" />
+            <span className="text-md font-medium">{getDayAndDate()}</span>
+          </div>
+          <div className="flex items-center px-4 py-2 bg-gray-100 rounded-xl">
+            <FaRegClock className="mr-2 text-blue-500" />
+            <span className="text-md font-medium">{getHour()}</span>
           </div>
         </div>
-      );
-    };
+      </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-40">
+          <FaSpinner className="animate-spin text-4xl text-blue-600" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
+            <FaBoxOpen className="text-4xl text-blue-500 mb-2" />
+            <span className="text-5xl font-bold text-gray-800">{animatedCartons}</span>
+            <p className="text-md text-gray-500 mt-2">Cartons</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
+            <FaTruck className="text-4xl text-green-500 mb-2" />
+            <span className="text-5xl font-bold text-gray-800">{animatedArrivages}</span>
+            <p className="text-md text-gray-500 mt-2">Arrivages</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
+            <FaUndoAlt className="text-4xl text-red-500 mb-2" />
+            <span className="text-5xl font-bold text-gray-800">{animatedRetours}</span>
+            <p className="text-md text-gray-500 mt-2">Retours</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
+            <FaMobileAlt className="text-4xl text-purple-500 mb-2" />
+            <span className="text-5xl font-bold text-gray-800">{animatedMobilesVendus}</span>
+            <p className="text-md text-gray-500 mt-2">Mobiles Vendus</p>
+          </div>
+          <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
+            <FaHeadphones className="text-4xl text-yellow-500 mb-2" />
+            <span className="text-5xl font-bold text-gray-800">{animatedAccessoires}</span>
+            <p className="text-md text-gray-500 mt-2">Accessoires</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
-    export default Login;
-    
+export default Accueil;

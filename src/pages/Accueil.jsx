@@ -44,7 +44,9 @@ const Accueil = ({ user, currentTime }) => {
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/rapports/totals', {
+      // Utilisation de la variable d'environnement VITE_API_URL
+      const API_URL = import.meta.env.VITE_API_URL;
+      const response = await axios.get(`${API_URL}/api/rapports/totals`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -86,19 +88,19 @@ const Accueil = ({ user, currentTime }) => {
 
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg transition-all duration-300">
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center">
-          <h2 className="text-3xl font-semibold">{getGreeting()}, {user.fullName || user.username} !</h2>
-          <span className="ml-2 text-3xl">👋</span>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+        <div className="flex items-center mb-4 md:mb-0">
+          <h2 className="text-2xl md:text-3xl font-semibold">{getGreeting()}, {user.fullName || user.username} !</h2>
+          <span className="ml-2 text-2xl md:text-3xl">👋</span>
         </div>
-        <div className="flex space-x-4">
+        <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4">
           <div className="flex items-center px-4 py-2 bg-gray-100 rounded-xl">
             <FaRegCalendarAlt className="mr-2 text-blue-500" />
-            <span className="text-md font-medium">{getDayAndDate()}</span>
+            <span className="text-sm md:text-md font-medium">{getDayAndDate()}</span>
           </div>
           <div className="flex items-center px-4 py-2 bg-gray-100 rounded-xl">
             <FaRegClock className="mr-2 text-blue-500" />
-            <span className="text-md font-medium">{getHour()}</span>
+            <span className="text-sm md:text-md font-medium">{getHour()}</span>
           </div>
         </div>
       </div>
@@ -107,31 +109,31 @@ const Accueil = ({ user, currentTime }) => {
           <FaSpinner className="animate-spin text-4xl text-blue-600" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
           <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
             <FaBoxOpen className="text-4xl text-blue-500 mb-2" />
-            <span className="text-5xl font-bold text-gray-800">{animatedCartons}</span>
-            <p className="text-md text-gray-500 mt-2">Cartons</p>
+            <span className="text-4xl md:text-5xl font-bold text-gray-800">{animatedCartons}</span>
+            <p className="text-sm md:text-md text-gray-500 mt-2">Cartons</p>
           </div>
           <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
             <FaTruck className="text-4xl text-green-500 mb-2" />
-            <span className="text-5xl font-bold text-gray-800">{animatedArrivages}</span>
-            <p className="text-md text-gray-500 mt-2">Arrivages</p>
+            <span className="text-4xl md:text-5xl font-bold text-gray-800">{animatedArrivages}</span>
+            <p className="text-sm md:text-md text-gray-500 mt-2">Arrivages</p>
           </div>
           <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
             <FaUndoAlt className="text-4xl text-red-500 mb-2" />
-            <span className="text-5xl font-bold text-gray-800">{animatedRetours}</span>
-            <p className="text-md text-gray-500 mt-2">Retours</p>
+            <span className="text-4xl md:text-5xl font-bold text-gray-800">{animatedRetours}</span>
+            <p className="text-sm md:text-md text-gray-500 mt-2">Retours</p>
           </div>
           <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
             <FaMobileAlt className="text-4xl text-purple-500 mb-2" />
-            <span className="text-5xl font-bold text-gray-800">{animatedMobilesVendus}</span>
-            <p className="text-md text-gray-500 mt-2">Mobiles Vendus</p>
+            <span className="text-4xl md:text-5xl font-bold text-gray-800">{animatedMobilesVendus}</span>
+            <p className="text-sm md:text-md text-gray-500 mt-2">Mobiles Vendus</p>
           </div>
           <div className="bg-gray-50 p-6 rounded-2xl shadow-md flex flex-col items-center justify-center transform transition-transform duration-300 hover:scale-105">
             <FaHeadphones className="text-4xl text-yellow-500 mb-2" />
-            <span className="text-5xl font-bold text-gray-800">{animatedAccessoires}</span>
-            <p className="text-md text-gray-500 mt-2">Accessoires</p>
+            <span className="text-4xl md:text-5xl font-bold text-gray-800">{animatedAccessoires}</span>
+            <p className="text-sm md:text-md text-gray-500 mt-2">Accessoires</p>
           </div>
         </div>
       )}

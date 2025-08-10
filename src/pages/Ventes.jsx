@@ -15,10 +15,13 @@ const Ventes = () => {
   const [error, setError] = useState('');
   const [totalAmount, setTotalAmount] = useState(0);
 
+  // Utilisation de la variable d'environnement VITE_API_URL
+  const API_URL = import.meta.env.VITE_API_URL;
+
   const fetchClients = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/clients', {
+      const response = await axios.get(`${API_URL}/api/clients`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -32,7 +35,7 @@ const Ventes = () => {
   const fetchProducts = async () => {
     try {
       const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:3000/api/products', {
+      const response = await axios.get(`${API_URL}/api/products`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -130,7 +133,7 @@ const Ventes = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:3000/api/ventes', {
+      await axios.post(`${API_URL}/api/ventes`, {
         client_id: selectedClient.id,
         vente_items: saleItems.map(item => ({
           ...item,
@@ -167,12 +170,12 @@ const Ventes = () => {
   };
 
   return (
-    <div className="p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-6xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Nouvelle Vente</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Nouvelle Vente</h1>
 
-        <div className="bg-white p-6 rounded-2xl shadow-lg mb-8">
-          <h2 className="text-xl font-semibold mb-4">Informations sur la Vente</h2>
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">Informations sur la Vente</h2>
           <form onSubmit={handleSubmitSale}>
             {/* Section Client */}
             <div className="mb-6">
@@ -303,11 +306,11 @@ const Ventes = () => {
 
             {/* Total et soumission */}
             {saleItems.length > 0 && (
-              <div className="mt-6 flex justify-between items-center p-4 bg-blue-50 text-blue-800 rounded-xl shadow-inner">
-                <span className="text-xl font-bold">Montant Total : {formatPrice(totalAmount)} FCFA</span>
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center p-4 bg-blue-50 text-blue-800 rounded-xl shadow-inner">
+                <span className="text-xl font-bold mb-4 sm:mb-0">Montant Total : {formatPrice(totalAmount)} FCFA</span>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center"
+                  className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? (
