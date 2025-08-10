@@ -17,7 +17,9 @@ const Login = () => {
     setError('');
     try {
       // Utilisez l'URL de votre backend Railway ici
-      const response = await axios.post('http://localhost:3000/api/auth/login', {
+      // La variable d'environnement sera automatiquement injectée par Vercel
+      const API_URL = import.meta.env.VITE_API_URL;
+      const response = await axios.post(`${API_URL}/api/auth/login`, {
         username,
         password,
       });
