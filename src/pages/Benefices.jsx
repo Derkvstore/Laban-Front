@@ -1,12 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import {
-  FaSpinner,
-  FaCalendarAlt,
-  FaTimesCircle,
-  FaMoneyBillWave,
-  FaChartBar,
-} from 'react-icons/fa';
+import { FaSpinner, FaCalendarAlt, FaMoneyBillWave, FaTimesCircle } from 'react-icons/fa';
 
 const formatCFA = (amount) => {
   const n = Number(amount);
@@ -41,12 +35,11 @@ export default function Benefices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Base URL backend : on privilégie VITE_API_URL, sinon fallback local en dev
+  // Base URL backend : privilégie VITE_API_URL
   const API_URL =
     import.meta.env?.VITE_API_URL ||
     (import.meta.env?.PROD ? '' : 'http://localhost:3001');
 
-  // Chargement des données (clients, ventes, items)
   useEffect(() => {
     const fetchAll = async () => {
       setLoading(true);
@@ -80,24 +73,21 @@ export default function Benefices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Statuts d'items à inclure
-  const keptStatuses = useMemo(() => new Set(['actif', 'vendu']), []);
+  // Map rapides
+  const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
+  const venteById = useMemo(() => new Map(ventes.map((v) => [v.id, v])), [ventes]);
 
-  // Lignes filtrées (par date si sélectionnée)
+  // Lignes : uniquement les items VENDUS (exclut actif/retourné/annulé), avec filtre par date si renseigné
   const rows = useMemo(() => {
-    if (!clients.length || !ventes.length || !items.length) return [];
-
-    const clientById = new Map(clients.map((c) => [c.id, c]));
-    const venteById = new Map(ventes.map((v) => [v.id, v]));
+    if (!items.length) return [];
     const list = [];
 
     for (const it of items) {
-      if (it?.statut_vente_item && !keptStatuses.has(it.statut_vente_item)) continue;
+      if (it?.statut_vente_item !== 'vendu') continue; // <= uniquement vendu
 
       const v = venteById.get(it.vente_id);
       if (!v) continue;
 
-      // Filtre par date exacte (jour)
       if (selectedDate) {
         const d = new Date(v.date_vente);
         const y = d.getFullYear();
@@ -109,6 +99,7 @@ export default function Benefices() {
 
       const cli = clientById.get(v.client_id);
       const clientNom = cli?.nom || '—';
+
       const produit =
         [it.marque, it.modele, it.stockage].filter(Boolean).join(' ') ||
         it.type ||
@@ -134,65 +125,26 @@ export default function Benefices() {
       });
     }
 
-    // tri par date vente desc
     list.sort((a, b) => new Date(b.dateVente) - new Date(a.dateVente));
     return list;
-  }, [clients, ventes, items, selectedDate, keptStatuses]);
+  }, [items, venteById, clientById, selectedDate]);
 
-  // Totaux sur le filtre actuel
-  const totalsFiltered = useMemo(() => {
-    let totalVentes = 0;
-    let totalAchats = 0;
-    for (const r of rows) {
-      totalVentes += Number(r.prixVente) * Number(r.quantite);
-      totalAchats += Number(r.prixAchat) * Number(r.quantite);
-    }
-    return {
-      totalVentes,
-      totalAchats,
-      benefice: totalVentes - totalAchats,
-    };
-  }, [rows]);
-
-  // Totaux sur toutes les ventes (ignorer le filtre)
-  const totalsAll = useMemo(() => {
-    if (!ventes.length || !items.length) return { totalVentes: 0, totalAchats: 0, benefice: 0 };
-
-    const venteById = new Map(ventes.map((v) => [v.id, v]));
-    let totalVentes = 0;
-    let totalAchats = 0;
-
-    for (const it of items) {
-      if (it?.statut_vente_item && !keptStatuses.has(it.statut_vente_item)) continue;
-      const v = venteById.get(it.vente_id);
-      if (!v) continue;
-
-      const prixAchat = Number(it.prix_unitaire_achat_au_moment_vente ?? 0);
-      const prixVente = Number(it.prix_unitaire_negocie ?? 0);
-      const quantite = Number(it.quantite_vendue ?? 1);
-
-      totalVentes += prixVente * quantite;
-      totalAchats += prixAchat * quantite;
-    }
-
-    return {
-      totalVentes,
-      totalAchats,
-      benefice: totalVentes - totalAchats,
-    };
-  }, [ventes, items, keptStatuses]);
+  // Bénéfice global (sur les lignes affichées)
+  const beneficeGlobal = useMemo(
+    () => rows.reduce((acc, r) => acc + Number(r.benefLigne || 0), 0),
+    [rows]
+  );
 
   return (
     <div className="p-6 sm:p-8 bg-gray-50 min-h-screen">
       <div className="w-full max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 flex items-center justify-center">
-          <FaMoneyBillWave className="text-green-600 mr-2" />
-          Détail des ventes & bénéfices
+        <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900">
+          Bénéfices
         </h1>
 
-        {/* Filtre par date (jour) */}
+        {/* Filtre par date */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6">
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row items-center justify-start gap-3">
             <label htmlFor="saleDate" className="text-gray-700 font-semibold flex items-center">
               <FaCalendarAlt className="text-blue-500 mr-2" /> Filtrer par date :
             </label>
@@ -225,83 +177,40 @@ export default function Benefices() {
           <div className="mb-4 text-red-600 text-center">{error}</div>
         )}
 
-        {/* Cartes de totaux */}
+        {/* Carte unique : Bénéfice global */}
         {!loading && !error && (
-          <>
-            {/* Totaux du filtre actuel */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6">
-              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
-                <FaChartBar className="mx-auto text-blue-500 mb-2" />
-                <div className="text-sm text-gray-500">Ventes (filtre)</div>
-                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsFiltered.totalVentes)}</div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
-                <FaChartBar className="mx-auto text-red-500 mb-2" />
-                <div className="text-sm text-gray-500">Achats (filtre)</div>
-                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsFiltered.totalAchats)}</div>
-              </div>
-              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
-                <FaChartBar className="mx-auto text-green-600 mb-2" />
-                <div className="text-sm text-gray-500">Bénéfice (filtre)</div>
-                <div className="text-2xl font-extrabold text-green-700">{formatCFA(totalsFiltered.benefice)}</div>
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 mb-8">
+            <div className="bg-white p-5 rounded-2xl shadow-md text-center">
+              <FaMoneyBillWave className="mx-auto text-green-600 mb-2" />
+              <div className="text-sm text-gray-500">Bénéfice global</div>
+              <div className="text-3xl sm:text-4xl font-extrabold text-green-700">
+                {formatCFA(beneficeGlobal)}
               </div>
             </div>
-
-            {/* Totaux sur toutes les ventes */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
-              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
-                <div className="text-sm text-gray-500">Ventes (toutes)</div>
-                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsAll.totalVentes)}</div>
-              </div>
-              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
-                <div className="text-sm text-gray-500">Achats (toutes)</div>
-                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsAll.totalAchats)}</div>
-              </div>
-              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
-                <div className="text-sm text-gray-500">Bénéfice global (toutes)</div>
-                <div className="text-2xl font-extrabold text-green-700">{formatCFA(totalsAll.benefice)}</div>
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
-        {/* Tableau */}
+        {/* Tableau des lignes (uniquement VENDU) */}
         {!loading && !error && (
           <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
-                    Client
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
-                    Produit
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
-                    Prix d'achat
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
-                    Prix de vente
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
-                    Qté
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
-                    Date de vente
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
-                    Prix total
-                  </th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
-                    Bénéfice (ligne)
-                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Client</th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Produit</th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix d'achat</th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix de vente</th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Qté</th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Date de vente</th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix total</th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Bénéfice (ligne)</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {rows.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-6 text-center text-gray-500">
-                      Aucune vente pour les critères sélectionnés.
+                      Aucune vente {selectedDate ? `pour la date sélectionnée.` : `à afficher.`}
                     </td>
                   </tr>
                 ) : (
@@ -309,20 +218,12 @@ export default function Benefices() {
                     <tr key={r.id} className="hover:bg-gray-50">
                       <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.client}</td>
                       <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.produit}</td>
-                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
-                        {formatCFA(r.prixAchat)}
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
-                        {formatCFA(r.prixVente)}
-                      </td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{formatCFA(r.prixAchat)}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{formatCFA(r.prixVente)}</td>
                       <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{r.quantite}</td>
                       <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{formatDateTime(r.dateVente)}</td>
-                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
-                        {formatCFA(r.prixTotal)}
-                      </td>
-                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right font-semibold text-green-700">
-                        {formatCFA(r.benefLigne)}
-                      </td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{formatCFA(r.prixTotal)}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right font-semibold text-green-700">{formatCFA(r.benefLigne)}</td>
                     </tr>
                   ))
                 )}
