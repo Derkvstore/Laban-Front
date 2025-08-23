@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { FaSpinner, FaCalendarAlt, FaTimesCircle, FaMoneyBillWave } from 'react-icons/fa';
+import {
+  FaSpinner,
+  FaCalendarAlt,
+  FaTimesCircle,
+  FaMoneyBillWave,
+  FaChartBar,
+} from 'react-icons/fa';
 
 const formatCFA = (amount) => {
   const n = Number(amount);
@@ -18,8 +24,11 @@ const formatDateTime = (dateString) => {
   const d = new Date(dateString);
   if (isNaN(d.getTime())) return 'N/A';
   return d.toLocaleString('fr-FR', {
-    year: 'numeric', month: 'short', day: 'numeric',
-    hour: '2-digit', minute: '2-digit'
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   });
 };
 
@@ -57,10 +66,10 @@ export default function Benefices() {
         setItems(itRes.data || []);
       } catch (err) {
         console.error('Erreur chargement données:', err);
-        // Message utile si 401 (token expiré/mauvaise clé serveur)
-        const msg = err?.response?.status === 401
-          ? "Non autorisé (401). Reconnectez-vous pour obtenir un nouveau jeton."
-          : "Impossible de charger les données. Vérifiez l'API et le token.";
+        const msg =
+          err?.response?.status === 401
+            ? 'Non autorisé (401). Reconnectez-vous pour obtenir un nouveau jeton.'
+            : "Impossible de charger les données. Vérifiez l'API et le token.";
         setError(msg);
       } finally {
         setLoading(false);
@@ -71,16 +80,15 @@ export default function Benefices() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Construction des lignes (jointure front) + filtre par date
+  // Statuts d'items à inclure
+  const keptStatuses = useMemo(() => new Set(['actif', 'vendu']), []);
+
+  // Lignes filtrées (par date si sélectionnée)
   const rows = useMemo(() => {
     if (!clients.length || !ventes.length || !items.length) return [];
 
-    const clientById = new Map(clients.map(c => [c.id, c]));
-    const venteById = new Map(ventes.map(v => [v.id, v]));
-
-    // statut des items à inclure (on exclut annulé/retourné)
-    const keptStatuses = new Set(['actif', 'vendu']);
-
+    const clientById = new Map(clients.map((c) => [c.id, c]));
+    const venteById = new Map(ventes.map((v) => [v.id, v]));
     const list = [];
 
     for (const it of items) {
@@ -89,7 +97,7 @@ export default function Benefices() {
       const v = venteById.get(it.vente_id);
       if (!v) continue;
 
-      // Filtre par date exacte (date du jour, sans tenir compte de l'heure)
+      // Filtre par date exacte (jour)
       if (selectedDate) {
         const d = new Date(v.date_vente);
         const y = d.getFullYear();
@@ -101,15 +109,17 @@ export default function Benefices() {
 
       const cli = clientById.get(v.client_id);
       const clientNom = cli?.nom || '—';
-
-      // Nom du produit : on concatène les champs existants
-      const produit = [it.marque, it.modele, it.stockage].filter(Boolean).join(' ') || (it.type || 'Produit');
+      const produit =
+        [it.marque, it.modele, it.stockage].filter(Boolean).join(' ') ||
+        it.type ||
+        'Produit';
 
       const prixAchat = Number(it.prix_unitaire_achat_au_moment_vente ?? 0);
       const prixVente = Number(it.prix_unitaire_negocie ?? 0);
-      const qte = Number(it.quantite_vendue ?? 1);
+      const quantite = Number(it.quantite_vendue ?? 1);
 
-      const prixTotal = prixVente * qte;
+      const prixTotal = prixVente * quantite;
+      const benefLigne = (prixVente - prixAchat) * quantite;
 
       list.push({
         id: it.id,
@@ -117,23 +127,67 @@ export default function Benefices() {
         produit,
         prixAchat,
         prixVente,
-        dateVente: v.date_vente,
-        quantite: qte,
+        quantite,
         prixTotal,
+        benefLigne,
+        dateVente: v.date_vente,
       });
     }
 
     // tri par date vente desc
     list.sort((a, b) => new Date(b.dateVente) - new Date(a.dateVente));
     return list;
-  }, [clients, ventes, items, selectedDate]);
+  }, [clients, ventes, items, selectedDate, keptStatuses]);
+
+  // Totaux sur le filtre actuel
+  const totalsFiltered = useMemo(() => {
+    let totalVentes = 0;
+    let totalAchats = 0;
+    for (const r of rows) {
+      totalVentes += Number(r.prixVente) * Number(r.quantite);
+      totalAchats += Number(r.prixAchat) * Number(r.quantite);
+    }
+    return {
+      totalVentes,
+      totalAchats,
+      benefice: totalVentes - totalAchats,
+    };
+  }, [rows]);
+
+  // Totaux sur toutes les ventes (ignorer le filtre)
+  const totalsAll = useMemo(() => {
+    if (!ventes.length || !items.length) return { totalVentes: 0, totalAchats: 0, benefice: 0 };
+
+    const venteById = new Map(ventes.map((v) => [v.id, v]));
+    let totalVentes = 0;
+    let totalAchats = 0;
+
+    for (const it of items) {
+      if (it?.statut_vente_item && !keptStatuses.has(it.statut_vente_item)) continue;
+      const v = venteById.get(it.vente_id);
+      if (!v) continue;
+
+      const prixAchat = Number(it.prix_unitaire_achat_au_moment_vente ?? 0);
+      const prixVente = Number(it.prix_unitaire_negocie ?? 0);
+      const quantite = Number(it.quantite_vendue ?? 1);
+
+      totalVentes += prixVente * quantite;
+      totalAchats += prixAchat * quantite;
+    }
+
+    return {
+      totalVentes,
+      totalAchats,
+      benefice: totalVentes - totalAchats,
+    };
+  }, [ventes, items, keptStatuses]);
 
   return (
     <div className="p-6 sm:p-8 bg-gray-50 min-h-screen">
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-7xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6 text-gray-900 flex items-center justify-center">
           <FaMoneyBillWave className="text-green-600 mr-2" />
-          Détail des produits vendus
+          Détail des ventes & bénéfices
         </h1>
 
         {/* Filtre par date (jour) */}
@@ -171,41 +225,107 @@ export default function Benefices() {
           <div className="mb-4 text-red-600 text-center">{error}</div>
         )}
 
+        {/* Cartes de totaux */}
+        {!loading && !error && (
+          <>
+            {/* Totaux du filtre actuel */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-6">
+              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
+                <FaChartBar className="mx-auto text-blue-500 mb-2" />
+                <div className="text-sm text-gray-500">Ventes (filtre)</div>
+                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsFiltered.totalVentes)}</div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
+                <FaChartBar className="mx-auto text-red-500 mb-2" />
+                <div className="text-sm text-gray-500">Achats (filtre)</div>
+                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsFiltered.totalAchats)}</div>
+              </div>
+              <div className="bg-white p-5 rounded-2xl shadow-md text-center">
+                <FaChartBar className="mx-auto text-green-600 mb-2" />
+                <div className="text-sm text-gray-500">Bénéfice (filtre)</div>
+                <div className="text-2xl font-extrabold text-green-700">{formatCFA(totalsFiltered.benefice)}</div>
+              </div>
+            </div>
+
+            {/* Totaux sur toutes les ventes */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-8">
+              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
+                <div className="text-sm text-gray-500">Ventes (toutes)</div>
+                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsAll.totalVentes)}</div>
+              </div>
+              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
+                <div className="text-sm text-gray-500">Achats (toutes)</div>
+                <div className="text-2xl font-bold text-gray-800">{formatCFA(totalsAll.totalAchats)}</div>
+              </div>
+              <div className="bg-gray-50 p-5 rounded-2xl shadow text-center">
+                <div className="text-sm text-gray-500">Bénéfice global (toutes)</div>
+                <div className="text-2xl font-extrabold text-green-700">{formatCFA(totalsAll.benefice)}</div>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Tableau */}
         {!loading && !error && (
           <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Client</th>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Produit</th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix d'achat</th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix de vente</th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Qté</th>
-                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">Date de vente</th>
-                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">Prix total</th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
+                    Produit
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                    Prix d'achat
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                    Prix de vente
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                    Qté
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-left font-semibold text-gray-700 uppercase tracking-wider">
+                    Date de vente
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                    Prix total
+                  </th>
+                  <th className="px-3 sm:px-6 py-3 text-right font-semibold text-gray-700 uppercase tracking-wider">
+                    Bénéfice (ligne)
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {rows.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-6 text-center text-gray-500">
-                      Aucun produit vendu pour les critères sélectionnés.
+                    <td colSpan={8} className="px-6 py-6 text-center text-gray-500">
+                      Aucune vente pour les critères sélectionnés.
                     </td>
                   </tr>
-                ) : rows.map((r) => (
-                  <tr key={r.id} className="hover:bg-gray-50">
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.client}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.produit}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{formatCFA(r.prixAchat)}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{formatCFA(r.prixVente)}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{r.quantite}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{formatDateTime(r.dateVente)}</td>
-                    <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right font-semibold text-gray-900">
-                      {formatCFA(r.prixTotal)}
-                    </td>
-                  </tr>
-                ))}
+                ) : (
+                  rows.map((r) => (
+                    <tr key={r.id} className="hover:bg-gray-50">
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.client}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{r.produit}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
+                        {formatCFA(r.prixAchat)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
+                        {formatCFA(r.prixVente)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">{r.quantite}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap">{formatDateTime(r.dateVente)}</td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right">
+                        {formatCFA(r.prixTotal)}
+                      </td>
+                      <td className="px-3 sm:px-6 py-3 whitespace-nowrap text-right font-semibold text-green-700">
+                        {formatCFA(r.benefLigne)}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
