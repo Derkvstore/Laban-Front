@@ -24,6 +24,7 @@ const Clients = () => {
   const [editingClient, setEditingClient] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [clientIdToDelete, setClientIdToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false); // <- AJOUT
 
   // Utilisation de la variable d'environnement VITE_API_URL
   const API_URL = import.meta.env.VITE_API_URL;
@@ -129,6 +130,7 @@ const Clients = () => {
   };
 
   const confirmDelete = async () => {
+    setIsDeleting(true); // <- AJOUT
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_URL}/api/clients/${clientIdToDelete}`, {
@@ -142,12 +144,14 @@ const Clients = () => {
       setError('Erreur lors de la suppression du client.');
       console.error(err);
     } finally {
+      setIsDeleting(false); // <- AJOUT
       setShowDeleteModal(false);
       setClientIdToDelete(null);
     }
   };
 
   const cancelDelete = () => {
+    if (isDeleting) return; // évite de fermer pendant l'action
     setShowDeleteModal(false);
     setClientIdToDelete(null);
   };
@@ -315,15 +319,18 @@ const Clients = () => {
             <div className="flex justify-end space-x-4">
               <button
                 onClick={cancelDelete}
-                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition"
+                className={`px-6 py-2 bg-gray-300 text-gray-800 rounded-xl transition ${isDeleting ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-400'}`}
+                disabled={isDeleting}
               >
                 Annuler
               </button>
               <button
                 onClick={confirmDelete}
-                className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
+                className={`px-6 py-2 bg-red-600 text-white rounded-xl transition flex items-center justify-center ${isDeleting ? 'opacity-75 cursor-wait' : 'hover:bg-red-700'}`}
+                disabled={isDeleting}
               >
-                Supprimer
+                {isDeleting ? <FaSpinner className="animate-spin mr-2" /> : null}
+                {isDeleting ? 'Suppression...' : 'Supprimer'}
               </button>
             </div>
           </div>
