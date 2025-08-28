@@ -276,86 +276,125 @@ const Sorties = () => {
                 </thead>
 
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {ventes.map((vente) => (
-                    <React.Fragment key={vente.id}>
-                      {vente.vente_items.map((item, index) => {
-                        const reste = Number(vente.montant_total) - Number(vente.montant_paye);
-                        return (
-                          <tr
-                            key={item.id}
-                            className={item.statut_vente_item !== 'actif' && item.statut_vente_item !== 'vendu' ? 'bg-gray-100 text-gray-500' : ''}
-                          >
-                            {/* Id / Date / Client */}
-                            {index === 0 && (
-                              <>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 border-r border-gray-200">
-                                  {vente.id}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {formatDate(vente.date_vente)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {getClientName(vente.client_id)}
-                                </td>
-                                {/* Statut de la VENTE (une seule fois, rowSpan) */}
-                                
-                              <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
-                                  {getSaleStatusLabel(vente.statut_paiement)}
-                                </span>
-                              </td>
-                              </>
-                            )}
+  {ventes.map((vente) => (
+    <React.Fragment key={vente.id}>
+      {vente.vente_items.map((item, index) => {
+        const reste = Number(vente.montant_total) - Number(vente.montant_paye);
+        return (
+          <tr
+            key={item.id}
+            className={
+              item.statut_vente_item !== 'actif' && item.statut_vente_item !== 'vendu'
+                ? 'bg-gray-100 text-gray-500'
+                : ''
+            }
+          >
+            {/* Lignes pour les informations de Vente (avec rowSpan) */}
+            {index === 0 && (
+              <>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                >
+                  {formatDate(vente.date_vente)}
+                </td>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                >
+                  {getClientName(vente.client_id)}
+                </td>
+              </>
+            )}
 
-                            {/* Détails de l'article */}
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.modele}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.type}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.stockage}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.quantite_vendue}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(item.prix_unitaire_negocie)}</td>
+            {/* Lignes pour les détails de l'article (sans rowSpan) */}
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              {item.marque}
+            </td>
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {item.modele}
+            </td>
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {item.type}
+            </td>
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {item.stockage}
+            </td>
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {item.quantite_vendue}
+            </td>
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+              {formatPrice(item.prix_unitaire_negocie)}
+            </td>
 
-                            {/* Totaux de la vente (une fois) */}
-                            {index === 0 && (
-                              <>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {formatPrice(vente.montant_total)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {formatPrice(vente.montant_paye)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
-                                  {formatPrice(reste)}
-                                </td>
-                              </>
-                            )}
+            {/* Lignes pour les totaux de Vente (avec rowSpan) */}
+            {index === 0 && (
+              <>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                >
+                  {formatPrice(vente.montant_total)}
+                </td>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
+                >
+                  {formatPrice(vente.montant_paye)}
+                </td>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200"
+                >
+                  {formatPrice(reste)}
+                </td>
+                <td
+                  rowSpan={vente.vente_items.length}
+                  className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200"
+                >
+                  <span
+                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(
+                      vente.statut_paiement
+                    )}`}
+                  >
+                    {getSaleStatusLabel(vente.statut_paiement)}
+                  </span>
+                </td>
+              </>
+            )}
 
-                            {/* Statut de l'ARTICLE (une par ligne, PAS de rowSpan) */}
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-                              <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getItemStatusColor(item.statut_vente_item)}`}>
-                                {getItemStatusLabel(item.statut_vente_item)}
-                              </span>
-                            </td>
+            {/* Ligne pour le statut de l'article (sans rowSpan) */}
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+              <span
+                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getItemStatusColor(
+                  item.statut_vente_item
+                )}`}
+              >
+                {getItemStatusLabel(item.statut_vente_item)}
+              </span>
+            </td>
 
-                            {/* Actions (une seule fois par vente) */}
-                            {index === 0 && (
-                              <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
-                                <button
-                                  onClick={() => handlePaiementClick(vente)}
-                                  className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
-                                  title="Gérer le paiement"
-                                >
-                                  <FaMoneyBillWave />
-                                </button>
-                                {/* Pour annuler/retourner, actions sur article => boutons par ligne plus haut si tu préfères */}
-                              </td>
-                            )}
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
-                </tbody>
+            {/* Ligne pour les actions (avec rowSpan) */}
+            {index === 0 && (
+              <td
+                rowSpan={vente.vente_items.length}
+                className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium"
+              >
+                <button
+                  onClick={() => handlePaiementClick(vente)}
+                  className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
+                  title="Gérer le paiement"
+                >
+                  <FaMoneyBillWave />
+                </button>
+              </td>
+            )}
+          </tr>
+        );
+      })}
+    </React.Fragment>
+  ))}
+</tbody>
               </table>
             </div>
           )}
