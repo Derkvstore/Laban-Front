@@ -270,7 +270,6 @@ const Sorties = () => {
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut article</th>
                     <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -362,17 +361,6 @@ const Sorties = () => {
                 </td>
               </>
             )}
-
-            {/* Ligne pour le statut de l'article (sans rowSpan) */}
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
-              <span
-                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getItemStatusColor(
-                  item.statut_vente_item
-                )}`}
-              >
-                {getItemStatusLabel(item.statut_vente_item)}
-              </span>
-            </td>
 
             {/* Ligne pour les actions (avec rowSpan) */}
             {index === 0 && (
