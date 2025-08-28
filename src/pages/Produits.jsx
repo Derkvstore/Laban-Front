@@ -48,17 +48,6 @@ const Produits = () => {
   const [suggestionsTypes, setSuggestionsTypes] = useState([]);
   const [suggestionsTypesCarton, setSuggestionsTypesCarton] = useState([]);
 
-  // création rapide de référence
-  const [refData, setRefData] = useState({
-    marque: '',
-    modele: '',
-    stockage: '',
-    type: '',
-    type_carton: ''
-  });
-  const [isRefSaving, setIsRefSaving] = useState(false);
-  const [refMsg, setRefMsg] = useState('');
-
   const API_URL = import.meta.env.VITE_API_URL;
 
   const formatPrice = (value) => {
@@ -225,77 +214,10 @@ const Produits = () => {
     return fournisseur ? fournisseur.nom : 'N/A';
   };
 
-  // Création rapide d'une référence
-  const handleRefChange = (e) => setRefData({ ...refData, [e.target.name]: e.target.value });
-  const handleCreateReference = async (e) => {
-    e.preventDefault();
-    setIsRefSaving(true);
-    setRefMsg('');
-    try {
-      const token = localStorage.getItem('token');
-      await axios.post(`${API_URL}/api/references_produits`, refData, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      setRefMsg('Référence enregistrée !');
-      setRefData({ marque: '', modele: '', stockage: '', type: '', type_carton: '' });
-      // rafraîchit les suggestions
-      fetchAllDistinctRefs();
-    } catch (error) {
-      setRefMsg("Erreur lors de l'enregistrement de la référence.");
-      console.error(error);
-    } finally {
-      setIsRefSaving(false);
-    }
-  };
-
   return (
     <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-6xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Produits</h1>
-
-        {/* Bloc création rapide de référence */}
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-4">
-          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-gray-800">Créer une référence (pour l’autocomplétion)</h2>
-          <form onSubmit={handleCreateReference} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
-            <input list="ref_marques" type="text" name="marque" placeholder="Marque" value={refData.marque} onChange={handleRefChange}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <datalist id="ref_marques">
-              {[...new Set([...suggestionsMarques, ...MARQUES])].map((m) => <option key={m} value={m} />)}
-            </datalist>
-
-            <input list="ref_modeles" type="text" name="modele" placeholder="Modèle" value={refData.modele} onChange={handleRefChange}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-            <datalist id="ref_modeles">
-              {[...new Set([...suggestionsModeles, ...(refData.marque && MODELES[refData.marque] ? MODELES[refData.marque] : [])])].map((x) => <option key={x} value={x} />)}
-            </datalist>
-
-            <input list="ref_stockages" type="text" name="stockage" placeholder="Stockage" value={refData.stockage} onChange={handleRefChange}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="ref_stockages">
-              {[...new Set([...suggestionsStockages, ...STOCKAGES])].map((x) => <option key={x} value={x} />)}
-            </datalist>
-
-            <input list="ref_types" type="text" name="type" placeholder="Type (CARTON/ARRIVAGE/ACCESSOIRE)" value={refData.type} onChange={handleRefChange}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="ref_types">
-              {[...new Set([...suggestionsTypes, 'CARTON', 'ARRIVAGE', 'ACCESSOIRE'])].map((x) => <option key={x} value={x} />)}
-            </datalist>
-
-            <input list="ref_types_carton" type="text" name="type_carton" placeholder="Type carton (optionnel)" value={refData.type_carton} onChange={handleRefChange}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <datalist id="ref_types_carton">
-              {[...new Set(suggestionsTypesCarton)].map((x) => <option key={x} value={x} />)}
-            </datalist>
-
-            <div className="md:col-span-5">
-              <button type="submit" disabled={isRefSaving}
-                className="mt-1 px-5 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
-                {isRefSaving ? 'Enregistrement…' : 'Enregistrer la référence'}
-              </button>
-              {refMsg && <span className="ml-3 text-sm text-gray-600">{refMsg}</span>}
-            </div>
-          </form>
-        </div>
 
         {/* Formulaire d'ajout/édition (inchangé dans sa logique) */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
