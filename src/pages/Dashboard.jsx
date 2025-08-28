@@ -8,19 +8,20 @@ import Clients from './Clients';
 import Fournisseurs from './Fournisseurs';
 import Produits from './Produits';
 import Ventes from './Ventes';
-import Sorties from './Sorties'; // Importe le nouveau composant Sorties
+import Sorties from './Sorties';
 import Factures from './Factures';
 import Retours from './Retours';
 import Benefices from './Benefices';
 import Dettes from './Dettes';
 import Rapports from './Rapports';
+import InvestissementProduits from './InvestissementProduits';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
   const [activeSection, setActiveSection] = useState(localStorage.getItem('activeSection') || 'accueil');
   const [currentTime, setCurrentTime] = useState(new Date());
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // État pour gérer l'ouverture/fermeture de la barre latérale sur mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const handleLogout = () => {
     localStorage.clear();
@@ -43,7 +44,6 @@ const Dashboard = () => {
     return <div>Chargement...</div>;
   }
 
-  // Fonction pour rendre le contenu de chaque section
   const renderContent = () => {
     switch (activeSection) {
       case 'accueil':
@@ -57,7 +57,7 @@ const Dashboard = () => {
       case 'ventes':
         return <Ventes />;
       case 'sorties':
-        return <Sorties />; // Affiche le composant Sorties
+        return <Sorties />;
       case 'factures':
         return <Factures />;
       case 'retours':
@@ -68,6 +68,8 @@ const Dashboard = () => {
         return <Dettes />;
       case 'rapports':
         return <Rapports />;
+      case 'investissement':
+        return <InvestissementProduits />;
       default:
         return <Accueil user={user} currentTime={currentTime} />;
     }
@@ -85,6 +87,7 @@ const Dashboard = () => {
     { name: 'Bénéfices', icon: FaChartBar, section: 'benefices' },
     { name: 'Dettes', icon: FaRegClock, section: 'dettes' },
     { name: 'Rapports', icon: FaFileInvoiceDollar, section: 'rapports' },
+    { name: 'Investissement Produits', icon: FaChartBar, section: 'investissement' },
   ];
 
   return (
@@ -109,15 +112,13 @@ const Dashboard = () => {
         />
       )}
 
-      {/* Barre latérale (Sidebar) */}
+      {/* Barre latérale */}
       <aside
         id="barre-laterale"
         className={[
-          // Mobile : fixed pour ne pas prendre de place dans le flex parent
           'fixed inset-y-0 left-0 w-64 bg-gray-900 text-white shadow-2xl z-40',
           'transition-transform duration-300 transform',
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
-          // Desktop : repasser en flux normal
           'md:static md:translate-x-0 md:flex md:flex-col'
         ].join(' ')}
       >
@@ -133,7 +134,7 @@ const Dashboard = () => {
                   <button
                     onClick={() => {
                       setActiveSection(item.section);
-                      setIsSidebarOpen(false); // Ferme la barre latérale après la sélection sur mobile
+                      setIsSidebarOpen(false);
                     }}
                     className={`w-full flex items-center px-4 py-2 rounded-xl transition duration-200 ${activeSection === item.section ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-gray-700'}`}
                   >
@@ -157,10 +158,7 @@ const Dashboard = () => {
       </aside>
 
       {/* Contenu principal */}
-      <main
-        className="flex-1 w-full min-w-0 p-4 sm:p-6 md:p-8 overflow-y-auto"
-        // Ajout d’un padding-top pour laisser la place au bouton hamburger en mobile
-      >
+      <main className="flex-1 w-full min-w-0 p-4 sm:p-6 md:p-8 overflow-y-auto">
         <header className="mb-4 sm:mb-6 md:mb-8 mt-12 md:mt-0">
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold capitalize">
             {activeSection.replace('-', ' ')}
