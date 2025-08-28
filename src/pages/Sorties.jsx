@@ -270,6 +270,7 @@ const Sorties = () => {
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut article</th>
                     <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -362,6 +363,17 @@ const Sorties = () => {
               </>
             )}
 
+            {/* Ligne pour le statut de l'article (sans rowSpan) */}
+            <td className="px-3 sm:px-6 py-4 whitespace-nowrap">
+              <span
+                className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getItemStatusColor(
+                  item.statut_vente_item
+                )}`}
+              >
+                {getItemStatusLabel(item.statut_vente_item)}
+              </span>
+            </td>
+
             {/* Ligne pour les actions (avec rowSpan) */}
             {index === 0 && (
               <td
@@ -374,6 +386,20 @@ const Sorties = () => {
                   title="Gérer le paiement"
                 >
                   <FaMoneyBillWave />
+                </button>
+                <button
+                  onClick={() => handleAnnulationClick(item.id)}
+                  className="text-red-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
+                  title="Annuler le produit"
+                >
+                  <FaTimes />
+                </button>
+                <button
+                  onClick={() => handleRetourClick(item.id)}
+                  className="text-yellow-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
+                  title="Retourner le produit"
+                >
+                  <FaSyncAlt />
                 </button>
               </td>
             )}
