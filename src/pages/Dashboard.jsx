@@ -93,16 +93,38 @@ const Dashboard = () => {
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
         className="md:hidden fixed top-4 left-4 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
+        aria-label={isSidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+        aria-expanded={isSidebarOpen}
+        aria-controls="barre-laterale"
       >
         {isSidebarOpen ? <FaTimes /> : <FaBars />}
       </button>
 
+      {/* Overlay mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 backdrop-blur-[1px] md:hidden z-30"
+          onClick={() => setIsSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Barre latérale (Sidebar) */}
-      <aside className={`w-64 bg-gray-900 text-white flex-col shadow-2xl transition-transform duration-300 transform md:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:flex`}>
+      <aside
+        id="barre-laterale"
+        className={[
+          // Mobile : fixed pour ne pas prendre de place dans le flex parent
+          'fixed inset-y-0 left-0 w-64 bg-gray-900 text-white shadow-2xl z-40',
+          'transition-transform duration-300 transform',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop : repasser en flux normal
+          'md:static md:translate-x-0 md:flex md:flex-col'
+        ].join(' ')}
+      >
         <div className="flex items-center justify-center p-6 border-b border-gray-700">
           <h1 className="text-2xl font-bold">Wassolo Service</h1>
         </div>
-        <nav className="flex-grow p-4">
+        <nav className="flex-grow p-4 overflow-y-auto">
           <ul>
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -124,7 +146,10 @@ const Dashboard = () => {
           </ul>
         </nav>
         <div className="p-4 border-t border-gray-700">
-          <button onClick={handleLogout} className="w-full flex items-center justify-center px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 shadow-lg">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 shadow-lg"
+          >
             <FaSignOutAlt className="mr-2" />
             <span>Déconnexion</span>
           </button>
@@ -132,9 +157,14 @@ const Dashboard = () => {
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
-        <header className="mb-4 sm:mb-8 mt-12 md:mt-0">
-          <h1 className="text-3xl md:text-4xl font-bold capitalize">{activeSection.replace('-', ' ')}</h1>
+      <main
+        className="flex-1 w-full min-w-0 p-4 sm:p-6 md:p-8 overflow-y-auto"
+        // Ajout d’un padding-top pour laisser la place au bouton hamburger en mobile
+      >
+        <header className="mb-4 sm:mb-6 md:mb-8 mt-12 md:mt-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold capitalize">
+            {activeSection.replace('-', ' ')}
+          </h1>
         </header>
         {renderContent()}
       </main>

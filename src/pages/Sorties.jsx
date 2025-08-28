@@ -298,7 +298,7 @@ const Sorties = () => {
                                   {getClientName(vente.client_id)}
                                 </td>
                                 {/* Statut de la VENTE (une seule fois, rowSpan) */}
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                                <td rowSpan={vente.vente_items.toLocaleDateString()} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
                                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
                                     {getSaleStatusLabel(vente.statut_paiement)}
                                   </span>
