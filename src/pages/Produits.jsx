@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaPlus, FaEdit, FaTrash, FaSpinner, FaCalendarAlt, FaClock } from 'react-icons/fa';
 
-// Listes pour autocomplétion
+// Listes pour autocomplétion (fallback local)
 const MARQUES = ["iPhone", "Samsung", "iPad", "AirPod"];
 const MODELES = {
   iPhone: [
@@ -41,9 +41,25 @@ const Produits = () => {
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
 
-  // Utilisation de la variable d'environnement VITE_API_URL
-  const API_URL = import.meta.env.VITE_API_URL;
+  // suggestions dynamiques
+  const [suggestionsMarques, setSuggestionsMarques] = useState([]);
+  const [suggestionsModeles, setSuggestionsModeles] = useState([]);
+  const [suggestionsStockages, setSuggestionsStockages] = useState([]);
+  const [suggestionsTypes, setSuggestionsTypes] = useState([]);
+  const [suggestionsTypesCarton, setSuggestionsTypesCarton] = useState([]);
 
+  // création rapide de référence
+  const [refData, setRefData] = useState({
+    marque: '',
+    modele: '',
+    stockage: '',
+    type: '',
+    type_carton: ''
+  });
+  const [isRefSaving, setIsRefSaving] = useState(false);
+  const [refMsg, setRefMsg] = useState('');
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   const formatPrice = (value) => {
     if (!value) return '';
@@ -52,19 +68,14 @@ const Produits = () => {
       maximumFractionDigits: 0,
     });
   };
-
-  const parsePrice = (value) => {
-    return parseFloat(value.replace(/\s/g, '')) || 0;
-  };
+  const parsePrice = (value) => parseFloat(value.replace(/\s/g, '')) || 0;
 
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/products`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       setProducts(response.data);
     } catch (err) {
@@ -79,9 +90,7 @@ const Produits = () => {
     try {
       const token = localStorage.getItem('token');
       const response = await axios.get(`${API_URL}/api/fournisseurs`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       setFournisseurs(response.data);
     } catch (err) {
@@ -90,26 +99,36 @@ const Produits = () => {
     }
   };
 
+  const fetchAllDistinctRefs = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`${API_URL}/api/references_produits/distinct`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setSuggestionsMarques(Array.isArray(data.marques) ? data.marques : []);
+      setSuggestionsModeles(Array.isArray(data.modeles) ? data.modeles : []);
+      setSuggestionsStockages(Array.isArray(data.stockages) ? data.stockages : []);
+      setSuggestionsTypes(Array.isArray(data.types) ? data.types : []);
+      setSuggestionsTypesCarton(Array.isArray(data.type_cartons) ? data.type_cartons : []);
+    } catch (e) {
+      console.warn('Références indisponibles (fallback local).', e?.message || e);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchFournisseurs();
+    fetchAllDistinctRefs();
   }, []);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
-
   const handlePriceChange = (e) => {
     const { name, value } = e.target;
     const rawValue = value.replace(/\D/g, '');
     const formattedValue = formatPrice(rawValue);
-    setFormData({
-      ...formData,
-      [name]: formattedValue,
-    });
+    setFormData({ ...formData, [name]: formattedValue });
   };
 
   const handleSubmit = async (e) => {
@@ -122,29 +141,22 @@ const Produits = () => {
       ? `${API_URL}/api/products/${editingProduct.id}`
       : `${API_URL}/api/products`;
     const method = editingProduct ? 'put' : 'post';
-    
+
     const cleanedFormData = {
       ...formData,
       prix_achat: parsePrice(formData.prix_achat),
       prix_vente_suggere: parsePrice(formData.prix_vente_suggere),
     };
-    
+
     if (cleanedFormData.prix_vente_suggere <= cleanedFormData.prix_achat) {
-      setError('Le prix de vente doit être supérieur au prix d\'achat.');
+      setError("Le prix de vente doit être supérieur au prix d'achat.");
       setIsFormLoading(false);
       return;
     }
 
     try {
       const token = localStorage.getItem('token');
-      await axios({
-        method,
-        url,
-        data: cleanedFormData,
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      await axios({ method, url, data: cleanedFormData, headers: { 'Authorization': `Bearer ${token}` } });
       fetchProducts();
       setSuccess(`Produit ${editingProduct ? 'modifié' : 'ajouté'} avec succès !`);
       setFormData({
@@ -153,7 +165,7 @@ const Produits = () => {
       });
       setEditingProduct(null);
     } catch (err) {
-      setError('Erreur lors de l\'enregistrement du produit.');
+      setError("Erreur lors de l'enregistrement du produit.");
       console.error(err);
     } finally {
       setIsFormLoading(false);
@@ -176,18 +188,14 @@ const Produits = () => {
   };
 
   const handleDelete = async (id) => {
-    // Affiche la modale de confirmation au lieu de window.confirm
     setProductToDelete(id);
     setIsConfirmingDelete(true);
   };
-
   const confirmDelete = async () => {
     try {
       const token = localStorage.getItem('token');
       await axios.delete(`${API_URL}/api/products/${productToDelete}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
+        headers: { 'Authorization': `Bearer ${token}` }
       });
       fetchProducts();
       setSuccess('Produit supprimé avec succès !');
@@ -199,28 +207,45 @@ const Produits = () => {
       setProductToDelete(null);
     }
   };
-
   const cancelDelete = () => {
     setIsConfirmingDelete(false);
     setProductToDelete(null);
   };
 
-
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const options = { year: 'numeric', month: 'long', day: 'numeric' };
-    return date.toLocaleDateString('fr-FR', options);
+    return date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
   };
-  
   const formatTime = (dateString) => {
     const date = new Date(dateString);
-    const options = { hour: '2-digit', minute: '2-digit' };
-    return date.toLocaleTimeString('fr-FR', options);
+    return date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   };
-
   const getFournisseurName = (id) => {
     const fournisseur = fournisseurs.find(f => f.id === id);
     return fournisseur ? fournisseur.nom : 'N/A';
+  };
+
+  // Création rapide d'une référence
+  const handleRefChange = (e) => setRefData({ ...refData, [e.target.name]: e.target.value });
+  const handleCreateReference = async (e) => {
+    e.preventDefault();
+    setIsRefSaving(true);
+    setRefMsg('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.post(`${API_URL}/api/references_produits`, refData, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setRefMsg('Référence enregistrée !');
+      setRefData({ marque: '', modele: '', stockage: '', type: '', type_carton: '' });
+      // rafraîchit les suggestions
+      fetchAllDistinctRefs();
+    } catch (error) {
+      setRefMsg("Erreur lors de l'enregistrement de la référence.");
+      console.error(error);
+    } finally {
+      setIsRefSaving(false);
+    }
   };
 
   return (
@@ -228,41 +253,102 @@ const Produits = () => {
       <div className="w-full max-w-6xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Produits</h1>
 
-        {/* Formulaire d'ajout/édition */}
+        {/* Bloc création rapide de référence */}
+        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-4">
+          <h2 className="text-lg sm:text-xl font-semibold mb-3 text-gray-800">Créer une référence (pour l’autocomplétion)</h2>
+          <form onSubmit={handleCreateReference} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
+            <input list="ref_marques" type="text" name="marque" placeholder="Marque" value={refData.marque} onChange={handleRefChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <datalist id="ref_marques">
+              {[...new Set([...suggestionsMarques, ...MARQUES])].map((m) => <option key={m} value={m} />)}
+            </datalist>
+
+            <input list="ref_modeles" type="text" name="modele" placeholder="Modèle" value={refData.modele} onChange={handleRefChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+            <datalist id="ref_modeles">
+              {[...new Set([...suggestionsModeles, ...(refData.marque && MODELES[refData.marque] ? MODELES[refData.marque] : [])])].map((x) => <option key={x} value={x} />)}
+            </datalist>
+
+            <input list="ref_stockages" type="text" name="stockage" placeholder="Stockage" value={refData.stockage} onChange={handleRefChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <datalist id="ref_stockages">
+              {[...new Set([...suggestionsStockages, ...STOCKAGES])].map((x) => <option key={x} value={x} />)}
+            </datalist>
+
+            <input list="ref_types" type="text" name="type" placeholder="Type (CARTON/ARRIVAGE/ACCESSOIRE)" value={refData.type} onChange={handleRefChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <datalist id="ref_types">
+              {[...new Set([...suggestionsTypes, 'CARTON', 'ARRIVAGE', 'ACCESSOIRE'])].map((x) => <option key={x} value={x} />)}
+            </datalist>
+
+            <input list="ref_types_carton" type="text" name="type_carton" placeholder="Type carton (optionnel)" value={refData.type_carton} onChange={handleRefChange}
+              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <datalist id="ref_types_carton">
+              {[...new Set(suggestionsTypesCarton)].map((x) => <option key={x} value={x} />)}
+            </datalist>
+
+            <div className="md:col-span-5">
+              <button type="submit" disabled={isRefSaving}
+                className="mt-1 px-5 py-2 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition">
+                {isRefSaving ? 'Enregistrement…' : 'Enregistrer la référence'}
+              </button>
+              {refMsg && <span className="ml-3 text-sm text-gray-600">{refMsg}</span>}
+            </div>
+          </form>
+        </div>
+
+        {/* Formulaire d'ajout/édition (inchangé dans sa logique) */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
           <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">{editingProduct ? 'Modifier un produit' : 'Ajouter un nouveau produit'}</h2>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-              <input list="marques" type="text" name="marque" placeholder="Marque" value={formData.marque} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
+              <input list="marques" type="text" name="marque" placeholder="Marque" value={formData.marque} onChange={handleChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
               <datalist id="marques">
-                {MARQUES.map((marque) => <option key={marque} value={marque} />)}
+                {[...new Set([...suggestionsMarques, ...MARQUES])].map((marque) => <option key={marque} value={marque} />)}
               </datalist>
-              <input list="modeles" type="text" name="modele" placeholder="Modèle" value={formData.modele} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
+
+              <input list="modeles" type="text" name="modele" placeholder="Modèle" value={formData.modele} onChange={handleChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
               <datalist id="modeles">
-                {formData.marque && MODELES[formData.marque] && MODELES[formData.marque].map((modele) => <option key={modele} value={modele} />)}
+                {[...new Set([
+                  ...suggestionsModeles,
+                  ...(formData.marque && MODELES[formData.marque] ? MODELES[formData.marque] : [])
+                ])].map((modele) => <option key={modele} value={modele} />)}
               </datalist>
-              <input list="stockages" type="text" name="stockage" placeholder="Stockage" value={formData.stockage} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" />
+
+              <input list="stockages" type="text" name="stockage" placeholder="Stockage" value={formData.stockage} onChange={handleChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" />
               <datalist id="stockages">
-                {STOCKAGES.map((stockage) => <option key={stockage} value={stockage} />)}
+                {[...new Set([...suggestionsStockages, ...STOCKAGES])].map((stockage) => <option key={stockage} value={stockage} />)}
               </datalist>
-              <select name="type" value={formData.type} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required>
+
+              <select name="type" value={formData.type} onChange={handleChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required>
                 <option value="">Sélectionner un type</option>
-                <option value="CARTON">CARTON</option>
-                <option value="ARRIVAGE">ARRIVAGE</option>
-                <option value="ACCESSOIRE">ACCESSOIRE</option>
+                {[...new Set(['CARTON','ARRIVAGE','ACCESSOIRE', ...suggestionsTypes])].map(t => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
               </select>
-              <input type="number" name="quantite_en_stock" placeholder="Quantité en stock" value={formData.quantite_en_stock} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
-              <input type="text" name="prix_achat" placeholder="Prix d'achat" value={formData.prix_achat} onChange={handlePriceChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
-              <input type="text" name="prix_vente_suggere" placeholder="Prix de vente suggéré" value={formData.prix_vente_suggere} onChange={handlePriceChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
-              <select name="fournisseur_id" value={formData.fournisseur_id} onChange={handleChange} className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
+
+              <input type="number" name="quantite_en_stock" placeholder="Quantité en stock" value={formData.quantite_en_stock} onChange={handleChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
+              <input type="text" name="prix_achat" placeholder="Prix d'achat" value={formData.prix_achat} onChange={handlePriceChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
+              <input type="text" name="prix_vente_suggere" placeholder="Prix de vente suggéré" value={formData.prix_vente_suggere} onChange={handlePriceChange}
+                     className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
+              <select name="fournisseur_id" value={formData.fournisseur_id} onChange={handleChange}
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200">
                 <option value="">Sélectionner un fournisseur</option>
                 {fournisseurs.map(f => (
                   <option key={f.id} value={f.id}>{f.nom}</option>
                 ))}
               </select>
             </div>
+
             {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
             {success && <p className="text-green-500 text-sm mb-4">{success}</p>}
+
             <div className="flex items-center">
               <button
                 type="submit"
@@ -303,33 +389,15 @@ const Produits = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Marque
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Modèle
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stockage
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Type
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Stock
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Prix Achat 
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Prix Vente Suggéré 
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Fournisseur
-                    </th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stockage</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Achat</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Vente Suggéré</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -344,16 +412,10 @@ const Produits = () => {
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatPrice(product.prix_vente_suggere)}</td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">{getFournisseurName(product.fournisseur_id)}</td>
                       <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
-                        <button
-                          onClick={() => handleEdit(product)}
-                          className="text-blue-600 hover:text-blue-900 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100"
-                        >
+                        <button onClick={() => handleEdit(product)} className="text-blue-600 hover:text-blue-900 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100">
                           <FaEdit />
                         </button>
-                        <button
-                          onClick={() => handleDelete(product.id)}
-                          className="ml-2 text-red-600 hover:text-red-900 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100"
-                        >
+                        <button onClick={() => handleDelete(product.id)} className="ml-2 text-red-600 hover:text-red-900 transition-colors duration-200 p-2 rounded-full hover:bg-gray-100">
                           <FaTrash />
                         </button>
                       </td>
@@ -365,6 +427,7 @@ const Produits = () => {
           )}
         </div>
       </div>
+
       {/* Modale de confirmation de suppression */}
       {isConfirmingDelete && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
@@ -372,16 +435,10 @@ const Produits = () => {
             <h3 className="text-xl font-bold text-gray-800 mb-4">Confirmer la suppression</h3>
             <p className="text-gray-600 mb-6">Êtes-vous sûr de vouloir supprimer ce produit ? Cette action est irréversible.</p>
             <div className="flex justify-end space-x-4">
-              <button
-                onClick={cancelDelete}
-                className="px-6 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition"
-              >
+              <button onClick={cancelDelete} className="px-6 py-2 bg-gray-300 text-gray-800 rounded-xl hover:bg-gray-400 transition">
                 Annuler
               </button>
-              <button
-                onClick={confirmDelete}
-                className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition"
-              >
+              <button onClick={confirmDelete} className="px-6 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition">
                 Supprimer
               </button>
             </div>
