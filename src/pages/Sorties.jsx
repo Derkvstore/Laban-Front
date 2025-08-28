@@ -270,7 +270,7 @@ const Sorties = () => {
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-                    {/* <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut article</th> */}
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut article</th>
                     <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -298,11 +298,12 @@ const Sorties = () => {
                                   {getClientName(vente.client_id)}
                                 </td>
                                 {/* Statut de la VENTE (une seule fois, rowSpan) */}
-                                <td rowSpan={vente.vente_items.toLocaleDateString()} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
-                                    {getSaleStatusLabel(vente.statut_paiement)}
-                                  </span>
-                                </td>
+                                
+                              <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                                <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
+                                  {getSaleStatusLabel(vente.statut_paiement)}
+                                </span>
+                              </td>
                               </>
                             )}
 
