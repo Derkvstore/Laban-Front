@@ -50,6 +50,9 @@ const Sorties = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Messages d'UI (succès)
+  const [succes, setSucces] = useState('');
+
   // Modales
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
@@ -102,7 +105,7 @@ const Sorties = () => {
     const d = new Date(dateString);
     return isNaN(d.getTime())
       ? '—'
-      : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', second: '2-digit',  });
+      : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   const formatPrice = (value) => {
@@ -127,9 +130,7 @@ const Sorties = () => {
     const paye  = Number(vente.montant_paye) || 0;
     const reste = Math.max(total - paye, 0);
 
-    // Si tous les articles sont annulés/retournés ou si total = 0 => Annulé
     if (tousArticlesClotures(vente) || total === 0) return 'annulé';
-
     if (total > 0 && reste === 0) return 'payé';
     if (paye > 0 && paye < total) return 'paiement_partiel';
     return 'en_attente';
@@ -205,7 +206,7 @@ const Sorties = () => {
   const handlePaiementSubmit = async () => {
     const val = parseFloat(montantPaiement);
     if (isNaN(val) || val <= 0) {
-      alert('Montant invalide.');
+      setError('Montant invalide.');
       return;
     }
     try {
@@ -219,7 +220,8 @@ const Sorties = () => {
       await fetchVentes();
       setShowPaymentModal(false);
       setMontantPaiement('');
-      alert('Paiement enregistré avec succès !');
+      setSucces('Paiement enregistré avec succès !');
+      setError('');
     } catch (err) {
       console.error(err);
       setError("Erreur lors de l'enregistrement du paiement.");
@@ -247,7 +249,8 @@ const Sorties = () => {
       );
       await fetchVentes();
       setShowCancelModal(false);
-      alert('Produit annulé avec succès !');
+      setSucces('Produit annulé avec succès !');
+      setError('');
     } catch (err) {
       console.error(err);
       setError("Erreur lors de l'annulation du produit.");
@@ -264,7 +267,7 @@ const Sorties = () => {
   const handleRetourSubmit = async () => {
     const q = parseInt(quantiteRetour, 10);
     if (!raisonRetour || !q || q <= 0) {
-      alert('Veuillez remplir tous les champs.');
+      setError('Veuillez remplir tous les champs de retour.');
       return;
     }
     try {
@@ -278,7 +281,8 @@ const Sorties = () => {
       await fetchVentes();
       setShowReturnModal(false);
       setQuantiteRetour(1);
-      alert('Retour enregistré avec succès !');
+      setSucces('Retour enregistré avec succès !');
+      setError('');
     } catch (err) {
       console.error(err);
       setError("Erreur lors de l'enregistrement du retour.");
@@ -292,7 +296,33 @@ const Sorties = () => {
       <div className="w-full max-w-6xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Section Sorties</h1>
 
-        {error && <div className="mb-4 text-red-500 text-center">{error}</div>}
+        {/* Bandeau de succès (interface) */}
+        {succes && (
+          <div className="mb-4 p-3 sm:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 flex items-start justify-between">
+            <span className="text-sm sm:text-base font-medium">{succes}</span>
+            <button
+              onClick={() => setSucces('')}
+              className="ml-4 p-1 rounded hover:bg-green-100 text-green-700"
+              aria-label="Fermer le message de succès"
+            >
+              <FaTimes />
+            </button>
+          </div>
+        )}
+
+        {/* Bandeau d'erreur (déjà présent) */}
+        {error && (
+          <div className="mb-4 p-3 sm:p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between">
+            <span className="text-sm sm:text-base font-medium">{error}</span>
+            <button
+              onClick={() => setError('')}
+              className="ml-4 p-1 rounded hover:bg-red-100 text-red-700"
+              aria-label="Fermer le message d'erreur"
+            >
+              <FaTimes />
+            </button>
+          </div>
+        )}
 
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
