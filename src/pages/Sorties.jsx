@@ -136,7 +136,7 @@ const Sorties = () => {
 
   const deriverStatutVente = (vente) => {
     const total = Number(vente.montant_total) || 0;
-    const paye  = Number(vente.montant_paye) || 0;
+    const paye = Number(vente.montant_paye) || 0;
     const reste = Math.max(total - paye, 0);
 
     if (tousArticlesClotures(vente) || total === 0) return 'annulé';
@@ -274,7 +274,6 @@ const Sorties = () => {
       setErreur('');
     } catch (err) {
       console.error(err);
-      // Afficher le vrai message backend si présent (utile pour ton 500)
       setErreur(err?.response?.data?.message || "Erreur lors de l'enregistrement du retour.");
     } finally {
       setEnvoiEnCours(false);
