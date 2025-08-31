@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { FaSpinner, FaCalendarAlt, FaMoneyBillWave, FaTimesCircle } from 'react-icons/fa';
+import { 
+  FaSpinner, 
+  FaCalendarAlt, 
+  FaMoneyBillWave, 
+  FaTimesCircle 
+
+} from 'react-icons/fa';
 
 const formatCFA = (amount) => {
   const n = Number(amount);

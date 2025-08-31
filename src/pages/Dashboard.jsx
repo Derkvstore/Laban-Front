@@ -29,6 +29,7 @@ import Benefices from './Benefices';
 import Dettes from './Dettes';
 import Rapports from './Rapports';
 import Références from './Références';
+import InvestissementProduits from './InvestissementProduits';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -83,6 +84,8 @@ const Dashboard = () => {
         return <Clients />;
       case 'fournisseurs':
         return <Fournisseurs />;
+        case 'investissementProduits':
+        return <InvestissementProduits />;
       case 'produits':
         return <Produits />;
       case 'ventes':
@@ -119,6 +122,7 @@ const Dashboard = () => {
     { name: 'Bénéfices', icon: FaChartBar, section: 'benefices' },
     { name: 'Dettes', icon: FaRegClock, section: 'dettes' },
     { name: 'Rapports', icon: FaFileInvoiceDollar, section: 'rapports' },
+    { name: 'InvestissementProduits', icon: FaFileInvoiceDollar, section: 'investissementProduits' },
   ];
 
   return (
