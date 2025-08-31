@@ -9,10 +9,12 @@ const Retours = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // nouveaux états UI (sélection + envoi fournisseur)
+  // sélection + recherche/filtre
   const [selection, setSelection] = useState(new Set());
   const [recherche, setRecherche] = useState('');
   const [clientFiltre, setClientFiltre] = useState('');
+
+  // états déjà présents (non affichés, restent optionnels)
   const [dateEnvoi, setDateEnvoi] = useState(() => {
     const d = new Date();
     d.setSeconds(0, 0);
@@ -22,23 +24,21 @@ const Retours = () => {
   const [observation, setObservation] = useState('');
   const [messageSucces, setMessageSucces] = useState('');
 
-  // Utilisation de la variable d'environnement
+  // API
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // ====== utilitaires d'affichage ======
-  const formatDate = (v) =>
-    v ? new Date(v).toLocaleDateString('fr-FR') : '';
-  const formatHeure = (v) =>
-    v ? new Date(v).toLocaleTimeString('fr-FR', { hour12: false }) : '';
+  // formatages
+  const formatDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '');
+  const formatHeure = (v) => (v ? new Date(v).toLocaleTimeString('fr-FR', { hour12: false }) : '');
 
-  // ====== chargements ======
+  // chargements
   const fetchRetours = async () => {
     setIsLoading(true);
     setError('');
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.get(`${API_URL}/api/returns`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setRetours(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -53,12 +53,12 @@ const Retours = () => {
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.get(`${API_URL}/api/clients`, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
       setClients(Array.isArray(data) ? data : []);
     } catch (e) {
       console.error(e);
-      // pas bloquant si la liste clients échoue
+      // non bloquant
     }
   };
 
@@ -68,7 +68,7 @@ const Retours = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ====== filtrage local ======
+  // filtrage local
   const retoursFiltres = useMemo(() => {
     const s = (recherche || '').toLowerCase();
     return retours.filter((r) => {
@@ -79,37 +79,36 @@ const Retours = () => {
     });
   }, [retours, clientFiltre, recherche]);
 
-  // ====== sélection ======
+  // sélection
   const basculerSelection = (id) => {
-    setSelection(prev => {
+    setSelection((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id); else n.add(id);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   };
-  const toutSelectionner = () => setSelection(new Set(retoursFiltres.map(r => r.id)));
+  const toutSelectionner = () => setSelection(new Set(retoursFiltres.map((r) => r.id)));
   const toutDeselectionner = () => setSelection(new Set());
 
-  // ====== appel API avec fallback (tiret ⇄ underscore) ======
+  // POST avec fallback (tiret ⇄ underscore)
   const posterVersFournisseur = async (corps) => {
     const token = localStorage.getItem('token');
-    // 1er essai : /retours-fournisseurs
     try {
       return await axios.post(`${API_URL}/api/retours-fournisseurs`, corps, {
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
     } catch (e) {
       if (e?.response?.status === 404) {
-        // 2e essai : /retours_fournisseurs
         return await axios.post(`${API_URL}/api/retours_fournisseurs`, corps, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
       }
       throw e;
     }
   };
 
-  // ====== envoi sélection vers fournisseur ======
+  // envoi sélection vers fournisseur (seulement les IDs)
   const envoyerAuFournisseur = async () => {
     setError('');
     setMessageSucces('');
@@ -119,21 +118,19 @@ const Retours = () => {
       return;
     }
 
-    // on n’essaie PAS d’aller relire le produit côté frontend
-    // on envoie juste les identifiants des retours sélectionnés
     const items = Array.from(selection).map((retour_id) => ({ retour_id }));
 
+    // On n’ajoute rien : les champs ci-dessous restent optionnels et ne sont pas nécessaires.
     const corps = {
-      items,                                  // liste d’objets { retour_id }
-      numero_dossier: numeroDossier || null,  // optionnel
-      date_envoi: dateEnvoi ? new Date(dateEnvoi).toISOString() : null, // optionnel
-      observation: observation || null        // optionnel
+      items,
+      // numero_dossier: numeroDossier || null,
+      // date_envoi: dateEnvoi ? new Date(dateEnvoi).toISOString() : null,
+      // observation: observation || null
     };
 
     try {
       await posterVersFournisseur(corps);
       setMessageSucces('Retours envoyés au fournisseur avec succès.');
-      // rafraîchir la liste et vider la sélection
       await fetchRetours();
       toutDeselectionner();
     } catch (e) {
@@ -145,14 +142,13 @@ const Retours = () => {
 
   return (
     <div className="space-y-6">
-      {/* En-tête */}
+      {/* Titre */}
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold">Section Retours Mobiles</h2>
       </div>
 
-      {/* Barre d’actions */}
+      {/* Barre d’actions (sans champs additionnels) */}
       <div className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
-        {/* messages */}
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-2">
             {error}
@@ -179,30 +175,26 @@ const Retours = () => {
           >
             <option value="">Tous les clients</option>
             {clients.map((c) => (
-              <option key={c.id} value={c.id}>{c.nom}</option>
+              <option key={c.id} value={c.id}>
+                {c.nom}
+              </option>
             ))}
           </select>
 
-          <input
-            value={numeroDossier}
-            onChange={(e) => setNumeroDossier(e.target.value)}
-            placeholder="N° dossier (ex: RMA-2025-001)"
-            className="w-full lg:w-56 px-3 py-2 border rounded-lg"
-          />
-
-          <input
-            type="datetime-local"
-            value={dateEnvoi}
-            onChange={(e) => setDateEnvoi(e.target.value)}
-            className="w-full lg:w-56 px-3 py-2 border rounded-lg"
-          />
-
-          <input
-            value={observation}
-            onChange={(e) => setObservation(e.target.value)}
-            placeholder="Observation (optionnel)"
-            className="flex-1 px-3 py-2 border rounded-lg"
-          />
+          <div className="flex gap-2">
+            <button
+              onClick={toutSelectionner}
+              className="px-3 py-2 rounded-lg border hover:bg-gray-100"
+            >
+              Tout sélectionner
+            </button>
+            <button
+              onClick={toutDeselectionner}
+              className="px-3 py-2 rounded-lg border hover:bg-gray-100"
+            >
+              Tout désélectionner
+            </button>
+          </div>
 
           <button
             onClick={envoyerAuFournisseur}
@@ -232,6 +224,7 @@ const Retours = () => {
                       type="checkbox"
                       checked={
                         selection.size > 0 &&
+                        retoursFiltres.length > 0 &&
                         retoursFiltres.every((r) => selection.has(r.id))
                       }
                       onChange={(e) =>
@@ -246,8 +239,12 @@ const Retours = () => {
                   <th className="px-3 py-2 text-left font-semibold">Type</th>
                   <th className="px-3 py-2 text-center font-semibold">Quantité</th>
                   <th className="px-3 py-2 text-left font-semibold">Défaut</th>
-                  <th className="px-3 py-2 text-left font-semibold"><FaCalendarAlt className="inline mr-1" /> Date</th>
-                  <th className="px-3 py-2 text-left font-semibold"><FaClock className="inline mr-1" /> Heure</th>
+                  <th className="px-3 py-2 text-left font-semibold">
+                    <FaCalendarAlt className="inline mr-1" /> Date
+                  </th>
+                  <th className="px-3 py-2 text-left font-semibold">
+                    <FaClock className="inline mr-1" /> Heure
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -272,8 +269,12 @@ const Retours = () => {
                       <td className="px-3 py-2 whitespace-nowrap">{r.modele}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{r.stockage || ''}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{r.type}</td>
-                      <td className="px-3 py-2 text-center whitespace-nowrap">{r.quantite_retournee}</td>
-                      <td className="px-3 py-2 whitespace-nowrap">{r.reason || r.defaut || ''}</td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">
+                        {r.quantite_retournee}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {r.reason || r.defaut || ''}
+                      </td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.return_date)}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatHeure(r.return_date)}</td>
                     </tr>
