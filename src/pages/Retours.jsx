@@ -14,36 +14,87 @@ const Retours = () => {
   const [recherche, setRecherche] = useState('');
   const [clientFiltre, setClientFiltre] = useState('');
 
-  // états déjà présents (non affichés, restent optionnels)
-  const [dateEnvoi, setDateEnvoi] = useState(() => {
+  // états déjà présents (non affichés)
+  const [dateEnvoi] = useState(() => {
     const d = new Date();
     d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
+    return d.toISOString().slice(0, 16);
   });
-  const [numeroDossier, setNumeroDossier] = useState('');
-  const [observation, setObservation] = useState('');
+  const [numeroDossier] = useState('');
+  const [observation] = useState('');
   const [messageSucces, setMessageSucces] = useState('');
 
   // API
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // formatages
+  // -------- utilitaires --------
   const formatDate = (v) => (v ? new Date(v).toLocaleDateString('fr-FR') : '');
   const formatHeure = (v) => (v ? new Date(v).toLocaleTimeString('fr-FR', { hour12: false }) : '');
 
-  // chargements
+  // Essaie une liste de chemins jusqu’à succès (2xx). Ignore 404, remonte les autres erreurs.
+  const getAvecFallback = async (chemins) => {
+    const token = localStorage.getItem('token');
+    let derniereErreur = null;
+    for (const path of chemins) {
+      try {
+        const res = await axios.get(`${API_URL}${path}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        return res.data;
+      } catch (e) {
+        if (e?.response?.status === 404) {
+          derniereErreur = e;
+          continue; // on essaie le chemin suivant
+        }
+        // autre erreur (401, 500, réseau...) => on remonte tout de suite
+        throw e;
+      }
+    }
+    // si on arrive ici : tous les chemins ont fait 404
+    throw derniereErreur || new Error('Ressource introuvable');
+  };
+
+  // POST vers fournisseur avec 2 alias possibles
+  const posterVersFournisseur = async (corps) => {
+    const token = localStorage.getItem('token');
+    try {
+      return await axios.post(`${API_URL}/api/retours-fournisseurs`, corps, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (e) {
+      if (e?.response?.status === 404) {
+        return await axios.post(`${API_URL}/api/retours_fournisseurs`, corps, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      }
+      throw e;
+    }
+  };
+
+  // -------- chargements --------
   const fetchRetours = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get(`${API_URL}/api/returns`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      setRetours(Array.isArray(data) ? data : []);
+      // Liste d’URL possibles selon ce que ton backend expose en prod
+      const donnees = await getAvecFallback([
+        '/api/returns',               // ton écran appelait celui-ci (404 en prod)
+        '/api/defective-returns',     // variante tiret
+        '/api/defective_returns',     // variante underscore
+        '/api/retours',               // variante FR
+        '/api/defectiveReturns'       // variante camelCase
+      ]);
+      setRetours(Array.isArray(donnees) ? donnees : []);
     } catch (e) {
       console.error(e);
-      setError("Erreur lors du chargement des retours.");
+      const cheminsTestes = [
+        '/api/returns',
+        '/api/defective-returns',
+        '/api/defective_returns',
+        '/api/retours',
+        '/api/defectiveReturns'
+      ].join(', ');
+      setError(`Erreur lors du chargement des retours (routes testées: ${cheminsTestes}).`);
     } finally {
       setIsLoading(false);
     }
@@ -53,7 +104,7 @@ const Retours = () => {
     try {
       const token = localStorage.getItem('token');
       const { data } = await axios.get(`${API_URL}/api/clients`, {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` }
       });
       setClients(Array.isArray(data) ? data : []);
     } catch (e) {
@@ -68,7 +119,7 @@ const Retours = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // filtrage local
+  // -------- filtrage local --------
   const retoursFiltres = useMemo(() => {
     const s = (recherche || '').toLowerCase();
     return retours.filter((r) => {
@@ -79,36 +130,18 @@ const Retours = () => {
     });
   }, [retours, clientFiltre, recherche]);
 
-  // sélection
+  // -------- sélection --------
   const basculerSelection = (id) => {
     setSelection((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (n.has(id)) n.delete(id); else n.add(id);
       return n;
     });
   };
   const toutSelectionner = () => setSelection(new Set(retoursFiltres.map((r) => r.id)));
   const toutDeselectionner = () => setSelection(new Set());
 
-  // POST avec fallback (tiret ⇄ underscore)
-  const posterVersFournisseur = async (corps) => {
-    const token = localStorage.getItem('token');
-    try {
-      return await axios.post(`${API_URL}/api/retours-fournisseurs`, corps, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-    } catch (e) {
-      if (e?.response?.status === 404) {
-        return await axios.post(`${API_URL}/api/retours_fournisseurs`, corps, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-      }
-      throw e;
-    }
-  };
-
-  // envoi sélection vers fournisseur (seulement les IDs)
+  // -------- envoi fournisseur (seulement les IDs) --------
   const envoyerAuFournisseur = async () => {
     setError('');
     setMessageSucces('');
@@ -120,13 +153,7 @@ const Retours = () => {
 
     const items = Array.from(selection).map((retour_id) => ({ retour_id }));
 
-    // On n’ajoute rien : les champs ci-dessous restent optionnels et ne sont pas nécessaires.
-    const corps = {
-      items,
-      // numero_dossier: numeroDossier || null,
-      // date_envoi: dateEnvoi ? new Date(dateEnvoi).toISOString() : null,
-      // observation: observation || null
-    };
+    const corps = { items }; // rien d’autre, on n’ajoute pas de champs UI
 
     try {
       await posterVersFournisseur(corps);
@@ -147,7 +174,7 @@ const Retours = () => {
         <h2 className="text-2xl sm:text-3xl font-bold">Section Retours Mobiles</h2>
       </div>
 
-      {/* Barre d’actions (sans champs additionnels) */}
+      {/* Barre d’actions */}
       <div className="bg-white rounded-xl border shadow-sm p-4 space-y-3">
         {error && (
           <div className="rounded-lg border border-red-200 bg-red-50 text-red-700 px-3 py-2">
@@ -175,23 +202,15 @@ const Retours = () => {
           >
             <option value="">Tous les clients</option>
             {clients.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nom}
-              </option>
+              <option key={c.id} value={c.id}>{c.nom}</option>
             ))}
           </select>
 
           <div className="flex gap-2">
-            <button
-              onClick={toutSelectionner}
-              className="px-3 py-2 rounded-lg border hover:bg-gray-100"
-            >
+            <button onClick={toutSelectionner} className="px-3 py-2 rounded-lg border hover:bg-gray-100">
               Tout sélectionner
             </button>
-            <button
-              onClick={toutDeselectionner}
-              className="px-3 py-2 rounded-lg border hover:bg-gray-100"
-            >
+            <button onClick={toutDeselectionner} className="px-3 py-2 rounded-lg border hover:bg-gray-100">
               Tout désélectionner
             </button>
           </div>
@@ -227,9 +246,7 @@ const Retours = () => {
                         retoursFiltres.length > 0 &&
                         retoursFiltres.every((r) => selection.has(r.id))
                       }
-                      onChange={(e) =>
-                        e.target.checked ? toutSelectionner() : toutDeselectionner()
-                      }
+                      onChange={(e) => (e.target.checked ? toutSelectionner() : toutDeselectionner())}
                     />
                   </th>
                   <th className="px-3 py-2 text-left font-semibold">Client</th>
@@ -269,12 +286,8 @@ const Retours = () => {
                       <td className="px-3 py-2 whitespace-nowrap">{r.modele}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{r.stockage || ''}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{r.type}</td>
-                      <td className="px-3 py-2 text-center whitespace-nowrap">
-                        {r.quantite_retournee}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap">
-                        {r.reason || r.defaut || ''}
-                      </td>
+                      <td className="px-3 py-2 text-center whitespace-nowrap">{r.quantite_retournee}</td>
+                      <td className="px-3 py-2 whitespace-nowrap">{r.reason || r.defaut || ''}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.return_date)}</td>
                       <td className="px-3 py-2 whitespace-nowrap">{formatHeure(r.return_date)}</td>
                     </tr>
