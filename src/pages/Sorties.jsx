@@ -117,7 +117,24 @@ const Sorties = () => {
     return c ? c.nom : 'N/A';
   };
 
-  // Couleurs badge – statut de VENTE (payé / paiement_partiel / en_attente / annulé)
+  // --- LOGIQUE D'AFFICHAGE DU STATUT DE VENTE ---
+  const tousArticlesClotures = (vente) =>
+    (vente.vente_items || []).length > 0 &&
+    vente.vente_items.every(it => it.statut_vente_item === 'annulé' || it.statut_vente_item === 'retourné');
+
+  const deriverStatutVente = (vente) => {
+    const total = Number(vente.montant_total) || 0;
+    const paye  = Number(vente.montant_paye) || 0;
+    const reste = Math.max(total - paye, 0);
+
+    // Si tous les articles sont annulés/retournés ou si total = 0 => Annulé
+    if (tousArticlesClotures(vente) || total === 0) return 'annulé';
+
+    if (total > 0 && reste === 0) return 'payé';
+    if (paye > 0 && paye < total) return 'paiement_partiel';
+    return 'en_attente';
+  };
+
   const getSaleStatusColor = (status) => {
     switch (status) {
       case 'payé':
@@ -133,7 +150,6 @@ const Sorties = () => {
     }
   };
 
-  // Libellé lisible – statut de VENTE
   const getSaleStatusLabel = (status) => {
     switch (status) {
       case 'payé':
@@ -141,7 +157,7 @@ const Sorties = () => {
       case 'paiement_partiel':
         return 'Partiel';
       case 'en_attente':
-        return 'En Cours'; // <- demandé
+        return 'En Cours';
       case 'annulé':
         return 'Annulé';
       default:
@@ -149,7 +165,6 @@ const Sorties = () => {
     }
   };
 
-  // Couleurs badge – statut d’ARTICLE (vendu / actif / annulé / retourné)
   const getItemStatusColor = (status) => {
     switch (status) {
       case 'vendu':
@@ -165,23 +180,22 @@ const Sorties = () => {
     }
   };
 
-  // Libellé lisible – statut d’ARTICLE
   const getItemStatusLabel = (status) => {
     switch (status) {
       case 'vendu':
         return 'Vendu';
       case 'actif':
-        return 'En Cours'; // <- demandé
+        return 'En Cours';
       case 'annulé':
         return 'Annulé';
       case 'retourné':
-        return 'Remplacer'; // <- ton wording pour un retour défectueux
+        return 'Remplacer';
       default:
         return status || '—';
     }
   };
 
-  // Modales – actions
+  // --- Modales / Actions ---
   const handlePaiementClick = (vente) => {
     setSelectedVenteId(vente.id);
     setVenteForPayment(vente);
@@ -297,25 +311,18 @@ const Sorties = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    {/* Date & Client (par vente) */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-
-                    {/* Détails article */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
-
-                    {/* Totaux (par vente) */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-
-                    {/* Actions (par article) */}
                     <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
@@ -324,15 +331,14 @@ const Sorties = () => {
                   {ventes.map((vente) => (
                     <React.Fragment key={vente.id}>
                       {vente.vente_items.map((item, index) => {
-                        const reste = Number(vente.montant_total) - Number(vente.montant_paye);
+                        const total = Number(vente.montant_total) || 0;
+                        const paye  = Number(vente.montant_paye) || 0;
+                        const reste = Math.max(total - paye, 0);
+                        const statutVenteAffiche = deriverStatutVente(vente);
                         const isItemActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
                         return (
-                          <tr
-                            key={item.id}
-                            className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}
-                          >
-                            {/* Date / Client (rowSpan) */}
+                          <tr key={item.id} className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
                             {index === 0 && (
                               <>
                                 <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
@@ -344,50 +350,34 @@ const Sorties = () => {
                               </>
                             )}
 
-                            {/* Article */}
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {item.marque}
-                            </td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {item.modele}
-                            </td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {item.stockage}
-                            </td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {item.type}
-                            </td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {item.quantite_vendue}
-                            </td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
-                              {formatPrice(item.prix_unitaire_negocie)}
-                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{formatPrice(item.prix_unitaire_negocie)}</td>
 
-                            {/* Totaux & statut vente (rowSpan) */}
                             {index === 0 && (
                               <>
                                 <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                  {formatPrice(vente.montant_total)}
+                                  {formatPrice(total)}
                                 </td>
                                 <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                  {formatPrice(vente.montant_paye)}
+                                  {formatPrice(paye)}
                                 </td>
                                 <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
                                   {formatPrice(reste)}
                                 </td>
                                 <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
-                                    {getSaleStatusLabel(vente.statut_paiement)}
+                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(statutVenteAffiche)}`}>
+                                    {getSaleStatusLabel(statutVenteAffiche)}
                                   </span>
                                 </td>
                               </>
                             )}
 
-                            {/* Actions (par article) */}
                             <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
-                              {/* Paiement : une seule fois par vente (1ʳᵉ ligne) si reste > 0 */}
-                              {index === 0 && reste > 0 && (
+                              {index === 0 && Math.max(total - paye, 0) > 0 && (
                                 <button
                                   onClick={() => handlePaiementClick(vente)}
                                   className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200 mr-2"
@@ -397,7 +387,6 @@ const Sorties = () => {
                                 </button>
                               )}
 
-                              {/* Pour chaque article : Annuler / Retourner tant que l’article n’est ni annulé ni retourné */}
                               {item.statut_vente_item === 'annulé' ? (
                                 <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('annulé')}`}>{getItemStatusLabel('annulé')}</span>
                               ) : item.statut_vente_item === 'retourné' ? (
@@ -445,9 +434,9 @@ const Sorties = () => {
               <div className="text-sm font-semibold text-gray-700 mb-3">
                 <p>Total : <span className="font-bold">{formatPrice(venteForPayment.montant_total)}</span></p>
                 <p>Payé : <span className="font-bold">{formatPrice(venteForPayment.montant_paye)}</span></p>
-                <p>Reste : <span className="font-bold text-red-500">{formatPrice(venteForPayment.montant_total - venteForPayment.montant_paye)}</span></p>
-                <p>Statut : <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(venteForPayment.statut_paiement)}`}>
-                  {getSaleStatusLabel(venteForPayment.statut_paiement)}
+                <p>Reste : <span className="font-bold text-red-500">{formatPrice((Number(venteForPayment.montant_total) || 0) - (Number(venteForPayment.montant_paye) || 0))}</span></p>
+                <p>Statut : <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(deriverStatutVente(venteForPayment))}`}>
+                  {getSaleStatusLabel(deriverStatutVente(venteForPayment))}
                 </span></p>
               </div>
               <input
@@ -468,7 +457,7 @@ const Sorties = () => {
           </div>
         )}
 
-        {/* Modale Annulation (avec select) */}
+        {/* Modale Annulation */}
         {showCancelModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
@@ -499,7 +488,7 @@ const Sorties = () => {
           </div>
         )}
 
-        {/* Modale Retour (avec select) */}
+        {/* Modale Retour */}
         {showReturnModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
@@ -519,7 +508,6 @@ const Sorties = () => {
                   <option key={r} value={r}>{r}</option>
                 ))}
               </select>
-
               <label className="block text-sm text-gray-700 mb-1">Quantité retournée</label>
               <input
                 type="number"
