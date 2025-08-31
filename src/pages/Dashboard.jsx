@@ -85,7 +85,7 @@ const Dashboard = () => {
       case 'fournisseurs':
         return <Fournisseurs />;
         case 'investissementProduits':
-        return <Investissement />;
+        return <InvestissementProduits />;
       case 'produits':
         return <Produits />;
       case 'ventes':
@@ -122,7 +122,7 @@ const Dashboard = () => {
     { name: 'Bénéfices', icon: FaChartBar, section: 'benefices' },
     { name: 'Dettes', icon: FaRegClock, section: 'dettes' },
     { name: 'Rapports', icon: FaFileInvoiceDollar, section: 'rapports' },
-    { name: 'Investissement', icon: FaFileInvoiceDollar, section: 'investissementProduits' },
+    { name: 'Investissement Produits', icon: FaFileInvoiceDollar, section: 'investissementProduits' },
   ];
 
   return (
