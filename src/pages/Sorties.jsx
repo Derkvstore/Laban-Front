@@ -2,6 +2,48 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { FaTrash, FaSpinner, FaMoneyBillWave, FaSyncAlt, FaTimes } from 'react-icons/fa';
 
+const RAISONS_ANNULATION = [
+  "Le client a changé d'avis",
+  "Problème de disponibilité chez le fournisseur",
+  "Article non conforme ou défectueux",
+  "Erreur de commande",
+  "Autre"
+];
+
+const RAISONS_REMPLACEMENT = [
+  "Ecran",
+  "Micro",
+  "Wifi",
+  "Emei",
+  "Resaux",
+  "Vibreur",
+  "OFF",
+  "Bluetooth",
+  "Selfie",
+  "Face OFF",
+  "Mobile casser par le clients il doit faire un rajout",
+  "Affichage Ordinateur",
+  "Flash",
+  "Batterie",
+  "SIM",
+  "Camera Avant",
+  "0%",
+  "Panic Full",
+  "Turbo SIM",
+  "Capteur",
+  "Température",
+  "Arrière Vitre",
+  "Volume +/-",
+  "Boutons Allumage",
+  "Error 4013",
+  "Charge Problème",
+  "Piece inconnue",
+  "Piece d'origin",
+  "Article ne correspondant pas à la description",
+  "Erreur de commande du fournisseur",
+  "Autre"
+];
+
 const Sorties = () => {
   const [ventes, setVentes] = useState([]);
   const [clients, setClients] = useState([]);
@@ -15,8 +57,8 @@ const Sorties = () => {
   const [selectedVenteId, setSelectedVenteId] = useState(null);
   const [selectedVenteItemId, setSelectedVenteItemId] = useState(null);
   const [montantPaiement, setMontantPaiement] = useState('');
-  const [raisonAnnulation, setRaisonAnnulation] = useState('Retour non confirmé par le client');
-  const [raisonRetour, setRaisonRetour] = useState('');
+  const [raisonAnnulation, setRaisonAnnulation] = useState(RAISONS_ANNULATION[0]);
+  const [raisonRetour, setRaisonRetour] = useState(RAISONS_REMPLACEMENT[0]);
   const [quantiteRetour, setQuantiteRetour] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venteForPayment, setVenteForPayment] = useState(null);
@@ -75,14 +117,14 @@ const Sorties = () => {
     return c ? c.nom : 'N/A';
   };
 
-  // Couleurs badge – statut de VENTE (payé / partiel / en cours / annulé)
+  // Couleurs badge – statut de VENTE (payé / paiement_partiel / en_attente / annulé)
   const getSaleStatusColor = (status) => {
     switch (status) {
       case 'payé':
         return 'bg-green-100 text-green-800';
       case 'paiement_partiel':
         return 'bg-yellow-100 text-yellow-800';
-      case 'en_attente': // “en cours”
+      case 'en_attente':
         return 'bg-blue-100 text-blue-800';
       case 'annulé':
         return 'bg-red-100 text-red-800';
@@ -99,7 +141,7 @@ const Sorties = () => {
       case 'paiement_partiel':
         return 'Partiel';
       case 'en_attente':
-        return 'En cours';
+        return 'En Cours'; // <- demandé
       case 'annulé':
         return 'Annulé';
       default:
@@ -107,7 +149,7 @@ const Sorties = () => {
     }
   };
 
-  // Couleurs badge – statut d’ARTICLE (actif / vendu / annulé / retourné)
+  // Couleurs badge – statut d’ARTICLE (vendu / actif / annulé / retourné)
   const getItemStatusColor = (status) => {
     switch (status) {
       case 'vendu':
@@ -129,12 +171,11 @@ const Sorties = () => {
       case 'vendu':
         return 'Vendu';
       case 'actif':
-        return 'Actif';
+        return 'En Cours'; // <- demandé
       case 'annulé':
         return 'Annulé';
       case 'retourné':
-        // Affichage voulu “Remplacer” pour un retour défectueux
-        return 'Remplacer';
+        return 'Remplacer'; // <- ton wording pour un retour défectueux
       default:
         return status || '—';
     }
@@ -192,7 +233,6 @@ const Sorties = () => {
       );
       await fetchVentes();
       setShowCancelModal(false);
-      setRaisonAnnulation('');
       alert('Produit annulé avec succès !');
     } catch (err) {
       console.error(err);
@@ -223,7 +263,6 @@ const Sorties = () => {
       );
       await fetchVentes();
       setShowReturnModal(false);
-      setRaisonRetour('');
       setQuantiteRetour(1);
       alert('Retour enregistré avec succès !');
     } catch (err) {
@@ -286,12 +325,12 @@ const Sorties = () => {
                     <React.Fragment key={vente.id}>
                       {vente.vente_items.map((item, index) => {
                         const reste = Number(vente.montant_total) - Number(vente.montant_paye);
-                        const isItemActif = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
+                        const isItemActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
                         return (
                           <tr
                             key={item.id}
-                            className={!isItemActif ? 'bg-gray-100 text-gray-500' : ''}
+                            className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}
                           >
                             {/* Date / Client (rowSpan) */}
                             {index === 0 && (
@@ -429,7 +468,7 @@ const Sorties = () => {
           </div>
         )}
 
-        {/* Modale Annulation */}
+        {/* Modale Annulation (avec select) */}
         {showCancelModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
@@ -440,13 +479,15 @@ const Sorties = () => {
                 </button>
               </div>
               <label className="block text-sm text-gray-700 mb-2">Raison</label>
-              <input
-                type="text"
+              <select
                 value={raisonAnnulation}
                 onChange={(e) => setRaisonAnnulation(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl mb-4"
-                placeholder="Raison de l'annulation"
-              />
+                className="w-full px-4 py-2 border rounded-xl mb-4 bg-white"
+              >
+                {RAISONS_ANNULATION.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
               <button
                 onClick={handleAnnulationSubmit}
                 className="w-full bg-red-500 text-white font-semibold py-2 rounded-xl hover:bg-red-600 flex items-center justify-center"
@@ -458,7 +499,7 @@ const Sorties = () => {
           </div>
         )}
 
-        {/* Modale Retour */}
+        {/* Modale Retour (avec select) */}
         {showReturnModal && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
@@ -469,13 +510,16 @@ const Sorties = () => {
                 </button>
               </div>
               <label className="block text-sm text-gray-700 mb-1">Raison</label>
-              <input
-                type="text"
+              <select
                 value={raisonRetour}
                 onChange={(e) => setRaisonRetour(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl mb-3"
-                placeholder="Motif du retour"
-              />
+                className="w-full px-4 py-2 border rounded-xl mb-3 bg-white"
+              >
+                {RAISONS_REMPLACEMENT.map((r) => (
+                  <option key={r} value={r}>{r}</option>
+                ))}
+              </select>
+
               <label className="block text-sm text-gray-700 mb-1">Quantité retournée</label>
               <input
                 type="number"
