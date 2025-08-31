@@ -28,7 +28,7 @@ import Retours from './Retours';
 import Benefices from './Benefices';
 import Dettes from './Dettes';
 import Rapports from './Rapports';
-import Références from './Références'; // ⬅️ nouvelle section
+import Références from './Références';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -81,7 +81,8 @@ const Dashboard = () => {
       case 'dettes':
         return <Dettes />;
       case 'rapports':
-        return <Rapports />;
+        // J'ajoute une classe spécifique pour la section Rapports
+        return <div className="p-4 sm:p-8 overflow-x-auto"><Rapports /></div>;
       case 'references':
         return <Références />;
       default:
@@ -94,7 +95,7 @@ const Dashboard = () => {
     { name: 'Clients', icon: FaUsers, section: 'clients' },
     { name: 'Fournisseurs', icon: FaBuilding, section: 'fournisseurs' },
     { name: 'Produits', icon: FaMobileAlt, section: 'produits' },
-    { name: 'Références', icon: FaTags, section: 'references' }, // ⬅️ bouton menu ajouté
+    { name: 'Références', icon: FaTags, section: 'references' },
     { name: 'Ventes (Détail)', icon: FaShoppingCart, section: 'ventes' },
     { name: 'Sorties', icon: FaSyncAlt, section: 'sorties' },
     { name: 'Factures (Gros)', icon: FaFileInvoiceDollar, section: 'factures' },
@@ -106,10 +107,10 @@ const Dashboard = () => {
 
   return (
     <div className="flex h-screen bg-gray-100 font-sans antialiased text-gray-900">
-      {/* Bouton menu mobile */}
+      {/* Bouton menu mobile - Marge gauche plus petite */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
+        className="md:hidden fixed top-4 left-2 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
       >
         {isSidebarOpen ? <FaTimes /> : <FaBars />}
       </button>
