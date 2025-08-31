@@ -17,7 +17,7 @@ const Login = () => {
     setError('');
     try {
       // Utilisez la variable d'environnement pour l'URL de l'API
-      const API_URL = import.meta.env.VITE_API_URL;
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       const response = await axios.post(`${API_URL}/api/auth/login`, {
         username,
         password,
