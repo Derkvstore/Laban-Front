@@ -31,6 +31,7 @@ import Rapports from './Rapports';
 import Références from './Références';
 import InvestissementProduits from './InvestissementProduits';
 import RapportJournalier from './RapportJournalier';
+import RetoursFournisseurs from './RetoursFournisseurs';
 
 
 const Dashboard = () => {
@@ -106,6 +107,8 @@ const Dashboard = () => {
         return <Rapports />;
          case 'rapportJournalier':
         return <RapportJournalier />;
+         case 'retoursFournisseurs':
+        return <RetoursFournisseurs />;
       case 'references':
         return <Références />;
       default:
@@ -123,6 +126,7 @@ const Dashboard = () => {
     { name: 'Sorties', icon: FaSyncAlt, section: 'sorties' },
     { name: 'Factures (Gros)', icon: FaFileInvoiceDollar, section: 'factures' },
     { name: 'Retours Mobiles', icon: FaSyncAlt, section: 'retours' },
+   { name: 'Retours Fournisseurs', icon: FaSyncAlt, section: 'retoursFournisseurs' },
     { name: 'Bénéfices', icon: FaChartBar, section: 'benefices' },
     { name: 'Dettes', icon: FaRegClock, section: 'dettes' },
     { name: 'Rapports', icon: FaFileInvoiceDollar, section: 'rapports' },
