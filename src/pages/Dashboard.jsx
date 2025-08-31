@@ -81,8 +81,7 @@ const Dashboard = () => {
       case 'dettes':
         return <Dettes />;
       case 'rapports':
-        // J'ajoute une classe spécifique pour la section Rapports
-        return <div className="p-4 sm:p-8 overflow-x-auto"><Rapports /></div>;
+        return <Rapports />;
       case 'references':
         return <Références />;
       default:
@@ -106,11 +105,11 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans antialiased text-gray-900">
-      {/* Bouton menu mobile - Marge gauche plus petite */}
+    <div className="flex h-screen bg-gray-100 font-sans antialiased text-gray-900 overflow-x-hidden">
+      {/* Bouton menu mobile */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="md:hidden fixed top-4 left-2 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
       >
         {isSidebarOpen ? <FaTimes /> : <FaBars />}
       </button>
