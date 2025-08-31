@@ -102,7 +102,7 @@ const Sorties = () => {
     const d = new Date(dateString);
     return isNaN(d.getTime())
       ? '—'
-      : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', second: '2-digit',  });
   };
 
   const formatPrice = (value) => {
