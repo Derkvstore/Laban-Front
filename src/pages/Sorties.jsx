@@ -555,7 +555,7 @@ const Sorties = () => {
           )}
         </div>
 
-        {/* Modales (inchangées) */}
+        {/* Modale Paiement */}
         {afficherPaiement && ventePourPaiement && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 md:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
