@@ -22,6 +22,31 @@ export default function RetoursFournisseurs() {
     observation: ''
   });
 
+  // ====== Fallback URL (tiret -> underscore) ======
+  // On essaie d'abord /api/retours-fournisseurs ; si 404, on réessaie /api/retours_fournisseurs
+  const baseTiret = '/api/retours-fournisseurs';
+  const baseUnderscore = '/api/retours_fournisseurs';
+
+  const requeteAPI = async (suffixe = '', options = {}) => {
+    const url1 = `${backendUrl}${baseTiret}${suffixe}`;
+    const url2 = `${backendUrl}${baseUnderscore}${suffixe}`;
+    const opts = {
+      ...options,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...(options.headers || {})
+      }
+    };
+
+    // 1er essai (tiret)
+    let r = await fetch(url1, opts);
+    if (r.status === 404) {
+      // 2e essai (underscore)
+      r = await fetch(url2, opts);
+    }
+    return r;
+  };
+
   const STATUTS_FOURNISSEUR = [
     'en_attente_envoi',
     'envoye',
@@ -42,12 +67,20 @@ export default function RetoursFournisseurs() {
       if (filtreStatut) params.set('statut', filtreStatut);
       if (termeRecherche) params.set('q', termeRecherche);
 
-      const rR = await fetch(`${backendUrl}/api/retours-fournisseurs?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const dR = await rR.json();
-      if (!rR.ok) throw new Error(dR.message || 'Erreur chargement retours fournisseurs');
-      setRetours(Array.isArray(dR) ? dR : []);
+      const r = await requeteAPI(`?${params.toString()}`);
+      // Si backend renvoie HTML (fallback), éviter JSON.parse sur du HTML
+      const ct = r.headers.get('content-type') || '';
+      if (!r.ok) {
+        if (ct.includes('application/json')) {
+          const d = await r.json();
+          throw new Error(d.message || `Erreur ${r.status}`);
+        } else {
+          const t = await r.text();
+          throw new Error(`Erreur ${r.status} (contenu non JSON)`);
+        }
+      }
+      const d = ct.includes('application/json') ? await r.json() : [];
+      setRetours(Array.isArray(d) ? d : []);
     } catch (e) {
       console.error(e);
       setErreur(e.message || 'Erreur réseau');
@@ -87,14 +120,22 @@ export default function RetoursFournisseurs() {
         reintegrer_stock: !!statutForm.reintegrer_stock,
         observation: statutForm.observation || null
       };
-      const r = await fetch(`${backendUrl}/api/retours-fournisseurs/${statutForm.id}/statut`, {
+      const r = await requeteAPI(`/${statutForm.id}/statut`, {
         method: 'PUT',
-        headers: { 'Content-Type':'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type':'application/json' },
         body: JSON.stringify(corps)
       });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.message || 'Mise à jour impossible');
 
+      const ct = r.headers.get('content-type') || '';
+      if (!r.ok) {
+        if (ct.includes('application/json')) {
+          const d = await r.json();
+          throw new Error(d.message || 'Mise à jour impossible');
+        } else {
+          const t = await r.text();
+          throw new Error(`Mise à jour impossible (HTTP ${r.status})`);
+        }
+      }
       setSucces('Statut mis à jour.');
       setModalStatutOuvert(false);
       recharger();
@@ -216,7 +257,7 @@ export default function RetoursFournisseurs() {
         </div>
       )}
 
-      {/* Tableau liste (réception uniquement) */}
+      {/* Tableau liste */}
       <div className="bg-white rounded-xl border shadow-sm overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-100 text-gray-600">
