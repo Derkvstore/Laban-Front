@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FaTrash, FaSpinner, FaMoneyBillWave, FaSyncAlt, FaTimes } from 'react-icons/fa';
+import { FaTrash, FaSpinner, FaMoneyBillWave, FaSyncAlt, FaTimes, FaPrint } from 'react-icons/fa';
 
 const RAISONS_ANNULATION = [
   "Le client a changé d'avis",
@@ -49,8 +49,6 @@ const Sorties = () => {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
-
-  // Messages d'UI (succès)
   const [succes, setSucces] = useState('');
 
   // Modales
@@ -65,6 +63,9 @@ const Sorties = () => {
   const [quantiteRetour, setQuantiteRetour] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [venteForPayment, setVenteForPayment] = useState(null);
+
+  // Référence pour imprimer uniquement la table
+  const tableRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
@@ -101,11 +102,19 @@ const Sorties = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Date avec heure et secondes
   const formatDate = (dateString) => {
     const d = new Date(dateString);
     return isNaN(d.getTime())
       ? '—'
-      : d.toLocaleDateString('fr-FR', { year: 'numeric', month: 'long', day: 'numeric' });
+      : d.toLocaleString('fr-FR', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit'
+        });
   };
 
   const formatPrice = (value) => {
@@ -120,7 +129,7 @@ const Sorties = () => {
     return c ? c.nom : 'N/A';
   };
 
-  // --- LOGIQUE D'AFFICHAGE DU STATUT DE VENTE ---
+  // --- LOGIQUE D'AFFICHAGE DU STATUT DE VENTE (affichage uniquement) ---
   const tousArticlesClotures = (vente) =>
     (vente.vente_items || []).length > 0 &&
     vente.vente_items.every(it => it.statut_vente_item === 'annulé' || it.statut_vente_item === 'retourné');
@@ -196,7 +205,7 @@ const Sorties = () => {
     }
   };
 
-  // --- Modales / Actions ---
+  // --- Actions / Modales ---
   const handlePaiementClick = (vente) => {
     setSelectedVenteId(vente.id);
     setVenteForPayment(vente);
@@ -291,12 +300,55 @@ const Sorties = () => {
     }
   };
 
+  // Impression : n'imprimer que la liste
+  const handleImprimer = () => {
+    if (!tableRef.current) {
+      window.print();
+      return;
+    }
+    const contenu = tableRef.current.innerHTML;
+    const w = window.open('', '_blank', 'width=1000,height=700');
+    if (!w) {
+      window.print();
+      return;
+    }
+    w.document.open();
+    w.document.write(`
+      <html>
+        <head>
+          <title>Liste des Ventes</title>
+          <meta charset="utf-8"/>
+          <style>
+            * { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
+            h1 { font-size: 18px; margin: 0 0 12px 0; }
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid #e5e7eb; padding: 8px; font-size: 12px; }
+            th { background: #f9fafb; text-align: left; }
+            .right { text-align: right; }
+            @page { margin: 16mm; }
+          </style>
+        </head>
+        <body>
+          <h1>Liste des Ventes</h1>
+          <div>${contenu}</div>
+          <script>
+            window.onload = function(){
+              window.print();
+              window.onafterprint = () => window.close();
+            };
+          </script>
+        </body>
+      </html>
+    `);
+    w.document.close();
+  };
+
   return (
     <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
-      <div className="w-full max-w-6xl mx-auto">
+      <div className="w-full max-w-[1400px] mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Section Sorties</h1>
 
-        {/* Bandeau de succès (interface) */}
+        {/* Succès */}
         {succes && (
           <div className="mb-4 p-3 sm:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 flex items-start justify-between">
             <span className="text-sm sm:text-base font-medium">{succes}</span>
@@ -310,7 +362,7 @@ const Sorties = () => {
           </div>
         )}
 
-        {/* Bandeau d'erreur (déjà présent) */}
+        {/* Erreur */}
         {error && (
           <div className="mb-4 p-3 sm:p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between">
             <span className="text-sm sm:text-base font-medium">{error}</span>
@@ -325,10 +377,17 @@ const Sorties = () => {
         )}
 
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-            <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-0 text-gray-800">Liste des Ventes</h2>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition">
-              Imprimer la liste
+          {/* Barre d’outils responsive */}
+          <div className="w-full flex flex-wrap items-center gap-3 justify-between mb-4">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Liste des Ventes</h2>
+            <button
+              onClick={handleImprimer}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+              aria-label="Imprimer la liste"
+            >
+              <FaPrint />
+              <span className="hidden xs:inline">Imprimer la liste</span>
+              <span className="xs:hidden">Imprimer</span>
             </button>
           </div>
 
@@ -337,116 +396,129 @@ const Sorties = () => {
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-                    <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
+            // Conteneur scrollable + sticky actions pour iPad
+            <div className="relative overflow-x-auto rounded-xl border border-gray-100">
+              <div ref={tableRef}>
+                <table className="min-w-[1200px] w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
 
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {ventes.map((vente) => (
-                    <React.Fragment key={vente.id}>
-                      {vente.vente_items.map((item, index) => {
-                        const total = Number(vente.montant_total) || 0;
-                        const paye  = Number(vente.montant_paye) || 0;
-                        const reste = Math.max(total - paye, 0);
-                        const statutVenteAffiche = deriverStatutVente(vente);
-                        const isItemActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
 
-                        return (
-                          <tr key={item.id} className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
-                            {index === 0 && (
-                              <>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {formatDate(vente.date_vente)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
-                                  {getClientName(vente.client_id)}
-                                </td>
-                              </>
-                            )}
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
+                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
 
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">{formatPrice(item.prix_unitaire_negocie)}</td>
+                      {/* Colonne sticky */}
+                      <th className="px-3 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] sticky right-0 bg-gray-50">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
 
-                            {index === 0 && (
-                              <>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                  {formatPrice(total)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                  {formatPrice(paye)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
-                                  {formatPrice(reste)}
-                                </td>
-                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
-                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(statutVenteAffiche)}`}>
-                                    {getSaleStatusLabel(statutVenteAffiche)}
-                                  </span>
-                                </td>
-                              </>
-                            )}
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {ventes.map((vente) => (
+                      <React.Fragment key={vente.id}>
+                        {vente.vente_items.map((item, index) => {
+                          const total = Number(vente.montant_total) || 0;
+                          const paye  = Number(vente.montant_paye) || 0;
+                          const reste = Math.max(total - paye, 0);
+                          const statutVenteAffiche = deriverStatutVente(vente);
+                          const isItemActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
-                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
-                              {index === 0 && Math.max(total - paye, 0) > 0 && (
-                                <button
-                                  onClick={() => handlePaiementClick(vente)}
-                                  className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200 mr-2"
-                                  title="Gérer le paiement"
-                                >
-                                  <FaMoneyBillWave />
-                                </button>
-                              )}
-
-                              {item.statut_vente_item === 'annulé' ? (
-                                <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('annulé')}`}>{getItemStatusLabel('annulé')}</span>
-                              ) : item.statut_vente_item === 'retourné' ? (
-                                <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('retourné')}`}>{getItemStatusLabel('retourné')}</span>
-                              ) : (
+                          return (
+                            <tr key={item.id} className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
+                              {index === 0 && (
                                 <>
-                                  <button
-                                    onClick={() => handleAnnulationClick(item.id)}
-                                    className="text-red-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200 mr-2"
-                                    title="Annuler le produit"
-                                  >
-                                    <FaTimes />
-                                  </button>
-                                  <button
-                                    onClick={() => handleRetourClick(item.id)}
-                                    className="text-yellow-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
-                                    title="Retourner le produit"
-                                  >
-                                    <FaSyncAlt />
-                                  </button>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formatDate(vente.date_vente)}
+                                  </td>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {getClientName(vente.client_id)}
+                                  </td>
                                 </>
                               )}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </React.Fragment>
-                  ))}
-                </tbody>
-              </table>
+
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
+                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{formatPrice(item.prix_unitaire_negocie)}</td>
+
+                              {index === 0 && (
+                                <>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formatPrice(total)}
+                                  </td>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formatPrice(paye)}
+                                  </td>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
+                                    {formatPrice(reste)}
+                                  </td>
+                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap border-r border-gray-200">
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(statutVenteAffiche)}`}>
+                                      {getSaleStatusLabel(statutVenteAffiche)}
+                                    </span>
+                                  </td>
+                                </>
+                              )}
+
+                              {/* Colonne Actions sticky (toujours visible) */}
+                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white">
+                                {index === 0 && Math.max(total - paye, 0) > 0 && (
+                                  <button
+                                    onClick={() => handlePaiementClick(vente)}
+                                    className="text-green-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 sm:mr-2"
+                                    title="Gérer le paiement"
+                                    aria-label="Gérer le paiement"
+                                  >
+                                    <FaMoneyBillWave />
+                                  </button>
+                                )}
+
+                                {item.statut_vente_item === 'annulé' ? (
+                                  <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('annulé')}`}>{getItemStatusLabel('annulé')}</span>
+                                ) : item.statut_vente_item === 'retourné' ? (
+                                  <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('retourné')}`}>{getItemStatusLabel('retourné')}</span>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => handleAnnulationClick(item.id)}
+                                      className="text-red-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 sm:mr-2"
+                                      title="Annuler le produit"
+                                      aria-label="Annuler le produit"
+                                    >
+                                      <FaTimes />
+                                    </button>
+                                    <button
+                                      onClick={() => handleRetourClick(item.id)}
+                                      className="text-yellow-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200"
+                                      title="Retourner le produit"
+                                      aria-label="Retourner le produit"
+                                    >
+                                      <FaSyncAlt />
+                                    </button>
+                                  </>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
@@ -464,7 +536,9 @@ const Sorties = () => {
               <div className="text-sm font-semibold text-gray-700 mb-3">
                 <p>Total : <span className="font-bold">{formatPrice(venteForPayment.montant_total)}</span></p>
                 <p>Payé : <span className="font-bold">{formatPrice(venteForPayment.montant_paye)}</span></p>
-                <p>Reste : <span className="font-bold text-red-500">{formatPrice((Number(venteForPayment.montant_total) || 0) - (Number(venteForPayment.montant_paye) || 0))}</span></p>
+                <p>Reste : <span className="font-bold text-red-500">
+                  {formatPrice((Number(venteForPayment.montant_total) || 0) - (Number(venteForPayment.montant_paye) || 0))}
+                </span></p>
                 <p>Statut : <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(deriverStatutVente(venteForPayment))}`}>
                   {getSaleStatusLabel(deriverStatutVente(venteForPayment))}
                 </span></p>
