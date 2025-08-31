@@ -43,6 +43,7 @@ const Dashboard = () => {
     navigate('/login');
   };
 
+  // Horloge temps réel
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentTime(new Date());
@@ -50,12 +51,28 @@ const Dashboard = () => {
     return () => clearInterval(timer);
   }, []);
   
+  // Persistance de la section active
   useEffect(() => {
     localStorage.setItem('activeSection', activeSection);
   }, [activeSection]);
 
+  // Fermeture sidebar au clavier (Échap) pour l’accessibilité
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setIsSidebarOpen(false);
+    };
+    if (isSidebarOpen) {
+      document.addEventListener('keydown', onKeyDown);
+    }
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, [isSidebarOpen]);
+
   if (!user) {
-    return <div>Chargement...</div>;
+    return (
+      <div className="min-h-dvh flex items-center justify-center text-base sm:text-lg">
+        Chargement...
+      </div>
+    );
   }
 
   const renderContent = () => {
@@ -105,68 +122,114 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100 font-sans antialiased text-gray-900 overflow-x-hidden">
-      {/* Bouton menu mobile */}
+    <div className="flex min-h-dvh bg-gray-100 font-sans antialiased text-gray-900 overflow-x-hidden">
+      {/* Bouton menu mobile (toujours accessible en haut) */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 text-white bg-gray-900 rounded-xl shadow-lg"
+        className="md:hidden fixed top-3 left-3 z-50 p-2 rounded-xl shadow-lg text-white bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500/70 motion-reduce:transition-none transition"
+        aria-label={isSidebarOpen ? 'Fermer le menu' : 'Ouvrir le menu'}
+        aria-expanded={isSidebarOpen}
+        aria-controls="barre-laterale"
       >
         {isSidebarOpen ? <FaTimes /> : <FaBars />}
       </button>
 
-      {/* Sidebar */}
+      {/* Backdrop mobile pour cliquer hors de la sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="md:hidden fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] transition-opacity motion-reduce:transition-none"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar (overlay sur mobile, fixe sur desktop) */}
       <aside
-        className={`w-64 bg-gray-900 text-white flex-col shadow-2xl transition-transform duration-300 transform md:translate-x-0 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } md:flex`}
+        id="barre-laterale"
+        className={[
+          'fixed md:relative z-50 md:z-0',
+          'inset-y-0 left-0',
+          'w-72 sm:w-72 md:w-64',
+          'bg-gray-900 text-white',
+          'flex flex-col shadow-2xl md:shadow-none',
+          'transition-transform duration-300 motion-reduce:transition-none',
+          'transform md:translate-x-0',
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full',
+          'md:flex'
+        ].join(' ')}
       >
-        <div className="flex items-center justify-center p-6 border-b border-gray-700">
-          <h1 className="text-2xl font-bold">Wassolo Service</h1>
+        <div className="flex items-center justify-between md:justify-center gap-3 p-5 border-b border-gray-800/60">
+          <h1 className="text-xl sm:text-2xl font-bold truncate">Wassolo Service</h1>
+          {/* Bouton fermer dans l’entête (mobile) */}
+          <button
+            onClick={() => setIsSidebarOpen(false)}
+            className="md:hidden p-2 rounded-lg hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500/70"
+            aria-label="Fermer le menu"
+          >
+            <FaTimes />
+          </button>
         </div>
-        <nav className="flex-grow p-4">
-          <ul>
+
+        <nav className="flex-grow p-3 sm:p-4 overflow-y-auto">
+          <ul className="space-y-1">
             {menuItems.map((item) => {
               const Icon = item.icon;
+              const isActive = activeSection === item.section;
               return (
-                <li key={item.section} className="mb-2">
+                <li key={item.section}>
                   <button
                     onClick={() => {
                       setActiveSection(item.section);
                       setIsSidebarOpen(false);
                     }}
-                    className={`w-full flex items-center px-4 py-2 rounded-xl transition duration-200 ${
-                      activeSection === item.section
+                    className={[
+                      'w-full flex items-center gap-3 px-3 sm:px-4 py-2.5 rounded-xl text-sm sm:text-base',
+                      'transition-colors motion-reduce:transition-none',
+                      isActive
                         ? 'bg-blue-600 text-white shadow-lg'
-                        : 'hover:bg-gray-700'
-                    }`}
+                        : 'hover:bg-gray-800/70 text-gray-100'
+                    ].join(' ')}
                   >
-                    <Icon className="mr-3" />
-                    <span>{item.name}</span>
+                    <Icon className="shrink-0" />
+                    <span className="truncate">{item.name}</span>
                   </button>
                 </li>
               );
             })}
           </ul>
         </nav>
-        <div className="p-4 border-t border-gray-700">
+
+        <div className="p-3 sm:p-4 border-t border-gray-800/60">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center justify-center px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 shadow-lg"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-colors motion-reduce:transition-none shadow-lg"
           >
-            <FaSignOutAlt className="mr-2" />
-            <span>Déconnexion</span>
+            <FaSignOutAlt className="shrink-0" />
+            <span className="truncate">Déconnexion</span>
           </button>
         </div>
       </aside>
 
       {/* Contenu principal */}
-      <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
-        <header className="mb-4 sm:mb-8 mt-12 md:mt-0">
-          <h1 className="text-3xl md:text-4xl font-bold capitalize">
+      <main
+        className={[
+          'flex-1',
+          'p-3 sm:p-5 lg:p-8',
+          'md:ml-0', // la sidebar est relative en md+
+          'w-full max-w-[1400px] mx-auto'
+        ].join(' ')}
+      >
+        {/* Espace en haut pour éviter que le bouton mobile chevauche le header */}
+        <div className="h-12 md:h-0" aria-hidden="true" />
+
+        <header className="sticky top-0 md:static z-10 -mx-3 sm:mx-0 mb-4 sm:mb-8 backdrop-blur supports-[backdrop-filter]:bg-white/50 bg-white md:bg-transparent px-3 sm:px-0 py-2 md:py-0">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold capitalize leading-tight">
             {activeSection.replace('-', ' ')}
           </h1>
         </header>
-        {renderContent()}
+
+        <section className="min-h-[60vh]">
+          {renderContent()}
+        </section>
       </main>
     </div>
   );
