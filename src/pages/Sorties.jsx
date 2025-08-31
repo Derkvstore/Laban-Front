@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { FaTrash, FaSpinner, FaMoneyBillWave, FaSyncAlt, FaTimes, FaPrint } from 'react-icons/fa';
+import { FaSpinner, FaMoneyBillWave, FaSyncAlt, FaTimes, FaPrint } from 'react-icons/fa';
 
 const RAISONS_ANNULATION = [
   "Le client a changé d'avis",
@@ -48,28 +48,28 @@ const Sorties = () => {
   const [ventes, setVentes] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const [erreur, setErreur] = useState('');
   const [succes, setSucces] = useState('');
 
   // Modales
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [showReturnModal, setShowReturnModal] = useState(false);
-  const [selectedVenteId, setSelectedVenteId] = useState(null);
-  const [selectedVenteItemId, setSelectedVenteItemId] = useState(null);
+  const [afficherPaiement, setAfficherPaiement] = useState(false);
+  const [afficherAnnulation, setAfficherAnnulation] = useState(false);
+  const [afficherRetour, setAfficherRetour] = useState(false);
+  const [venteIdSelectionnee, setVenteIdSelectionnee] = useState(null);
+  const [venteItemIdSelectionne, setVenteItemIdSelectionne] = useState(null);
   const [montantPaiement, setMontantPaiement] = useState('');
   const [raisonAnnulation, setRaisonAnnulation] = useState(RAISONS_ANNULATION[0]);
   const [raisonRetour, setRaisonRetour] = useState(RAISONS_REMPLACEMENT[0]);
   const [quantiteRetour, setQuantiteRetour] = useState(1);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [venteForPayment, setVenteForPayment] = useState(null);
+  const [envoiEnCours, setEnvoiEnCours] = useState(false);
+  const [ventePourPaiement, setVentePourPaiement] = useState(null);
 
-  // Référence pour imprimer uniquement la table
+  // Réf pour impression ciblée
   const tableRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  const fetchVentes = async () => {
+  const recupererVentes = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
@@ -81,29 +81,29 @@ const Sorties = () => {
       ]);
       setClients(clientsRes.data);
 
-      const ventesWithItems = await Promise.all(
+      const ventesAvecItems = await Promise.all(
         (ventesRes.data || []).map(async (vente) => {
           const itemsRes = await axios.get(`${API_URL}/api/vente_items/vente/${vente.id}`, { headers });
           return { ...vente, vente_items: itemsRes.data || [] };
         })
       );
 
-      setVentes(ventesWithItems);
+      setVentes(ventesAvecItems);
     } catch (err) {
       console.error(err);
-      setError('Erreur lors de la récupération des ventes.');
+      setErreur("Erreur lors de la récupération des ventes.");
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchVentes();
+    recupererVentes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Date avec heure et secondes
-  const formatDate = (dateString) => {
+  // Date avec heure:minute:seconde
+  const formaterDate = (dateString) => {
     const d = new Date(dateString);
     return isNaN(d.getTime())
       ? '—'
@@ -117,19 +117,19 @@ const Sorties = () => {
         });
   };
 
-  const formatPrice = (value) => {
-    if (value === null || value === undefined) return '';
-    const n = Number(value);
+  const formaterPrix = (valeur) => {
+    if (valeur === null || valeur === undefined) return '';
+    const n = Number(valeur);
     if (Number.isNaN(n)) return '';
     return n.toLocaleString('fr-FR', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' FCFA';
   };
 
-  const getClientName = (clientId) => {
+  const nomClient = (clientId) => {
     const c = clients.find((x) => x.id === clientId);
     return c ? c.nom : 'N/A';
   };
 
-  // --- LOGIQUE D'AFFICHAGE DU STATUT DE VENTE (affichage uniquement) ---
+  // --- Logique d'affichage (statut vente) ---
   const tousArticlesClotures = (vente) =>
     (vente.vente_items || []).length > 0 &&
     vente.vente_items.every(it => it.statut_vente_item === 'annulé' || it.statut_vente_item === 'retourné');
@@ -145,179 +145,157 @@ const Sorties = () => {
     return 'en_attente';
   };
 
-  const getSaleStatusColor = (status) => {
-    switch (status) {
-      case 'payé':
-        return 'bg-green-100 text-green-800';
-      case 'paiement_partiel':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'en_attente':
-        return 'bg-blue-100 text-blue-800';
-      case 'annulé':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const couleurStatutVente = (statut) => {
+    switch (statut) {
+      case 'payé': return 'bg-green-100 text-green-800';
+      case 'paiement_partiel': return 'bg-yellow-100 text-yellow-800';
+      case 'en_attente': return 'bg-blue-100 text-blue-800';
+      case 'annulé': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getSaleStatusLabel = (status) => {
-    switch (status) {
-      case 'payé':
-        return 'Vendu';
-      case 'paiement_partiel':
-        return 'Partiel';
-      case 'en_attente':
-        return 'En Cours';
-      case 'annulé':
-        return 'Annulé';
-      default:
-        return status || '—';
+  const libelleStatutVente = (statut) => {
+    switch (statut) {
+      case 'payé': return 'Vendu';
+      case 'paiement_partiel': return 'Partiel';
+      case 'en_attente': return 'En Cours';
+      case 'annulé': return 'Annulé';
+      default: return statut || '—';
     }
   };
 
-  const getItemStatusColor = (status) => {
-    switch (status) {
-      case 'vendu':
-        return 'bg-green-100 text-green-800';
-      case 'actif':
-        return 'bg-blue-100 text-blue-800';
-      case 'annulé':
-        return 'bg-gray-300 text-gray-800';
-      case 'retourné':
-        return 'bg-orange-100 text-orange-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+  const couleurStatutArticle = (statut) => {
+    switch (statut) {
+      case 'vendu': return 'bg-green-100 text-green-800';
+      case 'actif': return 'bg-blue-100 text-blue-800';
+      case 'annulé': return 'bg-gray-300 text-gray-800';
+      case 'retourné': return 'bg-orange-100 text-orange-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getItemStatusLabel = (status) => {
-    switch (status) {
-      case 'vendu':
-        return 'Vendu';
-      case 'actif':
-        return 'En Cours';
-      case 'annulé':
-        return 'Annulé';
-      case 'retourné':
-        return 'Remplacer';
-      default:
-        return status || '—';
+  const libelleStatutArticle = (statut) => {
+    switch (statut) {
+      case 'vendu': return 'Vendu';
+      case 'actif': return 'En Cours';
+      case 'annulé': return 'Annulé';
+      case 'retourné': return 'Remplacé'; // affichage demandé
+      default: return statut || '—';
     }
   };
 
   // --- Actions / Modales ---
-  const handlePaiementClick = (vente) => {
-    setSelectedVenteId(vente.id);
-    setVenteForPayment(vente);
-    setShowPaymentModal(true);
+  const ouvrirPaiement = (vente) => {
+    setVenteIdSelectionnee(vente.id);
+    setVentePourPaiement(vente);
+    setAfficherPaiement(true);
   };
 
-  const handlePaiementSubmit = async () => {
+  const soumettrePaiement = async () => {
     const val = parseFloat(montantPaiement);
     if (isNaN(val) || val <= 0) {
-      setError('Montant invalide.');
+      setErreur('Montant invalide.');
       return;
     }
     try {
-      setIsSubmitting(true);
+      setEnvoiEnCours(true);
       const token = localStorage.getItem('token');
       await axios.put(
         `${API_URL}/api/ventes/payment`,
-        { vente_id: selectedVenteId, montant_paye: val },
+        { vente_id: venteIdSelectionnee, montant_paye: val },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await fetchVentes();
-      setShowPaymentModal(false);
+      await recupererVentes();
+      setAfficherPaiement(false);
       setMontantPaiement('');
       setSucces('Paiement enregistré avec succès !');
-      setError('');
+      setErreur('');
     } catch (err) {
       console.error(err);
-      setError("Erreur lors de l'enregistrement du paiement.");
+      setErreur(err?.response?.data?.message || "Erreur lors de l'enregistrement du paiement.");
     } finally {
-      setIsSubmitting(false);
+      setEnvoiEnCours(false);
     }
   };
 
-  const handleAnnulationClick = (venteItemId) => {
-    setSelectedVenteItemId(venteItemId);
-    setShowCancelModal(true);
+  const ouvrirAnnulation = (venteItemId) => {
+    setVenteItemIdSelectionne(venteItemId);
+    setAfficherAnnulation(true);
   };
 
-  const handleAnnulationSubmit = async () => {
+  const soumettreAnnulation = async () => {
     try {
-      setIsSubmitting(true);
+      setEnvoiEnCours(true);
       const token = localStorage.getItem('token');
       await axios.put(
         `${API_URL}/api/ventes/cancel-item`,
         {
-          vente_item_id: selectedVenteItemId,
+          vente_item_id: venteItemIdSelectionne,
           cancellation_reason: raisonAnnulation || 'Retour non confirmé par le client',
         },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await fetchVentes();
-      setShowCancelModal(false);
+      await recupererVentes();
+      setAfficherAnnulation(false);
       setSucces('Produit annulé avec succès !');
-      setError('');
+      setErreur('');
     } catch (err) {
       console.error(err);
-      setError("Erreur lors de l'annulation du produit.");
+      setErreur(err?.response?.data?.message || "Erreur lors de l'annulation du produit.");
     } finally {
-      setIsSubmitting(false);
+      setEnvoiEnCours(false);
     }
   };
 
-  const handleRetourClick = (venteItemId) => {
-    setSelectedVenteItemId(venteItemId);
-    setShowReturnModal(true);
+  const ouvrirRetour = (venteItemId) => {
+    setVenteItemIdSelectionne(venteItemId);
+    setAfficherRetour(true);
   };
 
-  const handleRetourSubmit = async () => {
+  const soumettreRetour = async () => {
     const q = parseInt(quantiteRetour, 10);
     if (!raisonRetour || !q || q <= 0) {
-      setError('Veuillez remplir tous les champs de retour.');
+      setErreur('Veuillez remplir tous les champs de retour.');
       return;
     }
     try {
-      setIsSubmitting(true);
+      setEnvoiEnCours(true);
       const token = localStorage.getItem('token');
       await axios.post(
         `${API_URL}/api/ventes/return-defective`,
-        { vente_item_id: selectedVenteItemId, reason: raisonRetour, quantite_retournee: q },
+        { vente_item_id: venteItemIdSelectionne, reason: raisonRetour, quantite_retournee: q },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      await fetchVentes();
-      setShowReturnModal(false);
+      await recupererVentes();
+      setAfficherRetour(false);
       setQuantiteRetour(1);
       setSucces('Retour enregistré avec succès !');
-      setError('');
+      setErreur('');
     } catch (err) {
       console.error(err);
-      setError("Erreur lors de l'enregistrement du retour.");
+      // Afficher le vrai message backend si présent (utile pour ton 500)
+      setErreur(err?.response?.data?.message || "Erreur lors de l'enregistrement du retour.");
     } finally {
-      setIsSubmitting(false);
+      setEnvoiEnCours(false);
     }
   };
 
-  // Impression : n'imprimer que la liste
-  const handleImprimer = () => {
+  // Impression : n’imprimer que la table
+  const imprimerListe = () => {
     if (!tableRef.current) {
       window.print();
       return;
     }
     const contenu = tableRef.current.innerHTML;
-    const w = window.open('', '_blank', 'width=1000,height=700');
-    if (!w) {
-      window.print();
-      return;
-    }
+    const w = window.open('', '_blank', 'width=1200,height=800');
+    if (!w) { window.print(); return; }
     w.document.open();
     w.document.write(`
       <html>
         <head>
-          <title>Liste des Ventes</title>
           <meta charset="utf-8"/>
+          <title>Liste des Ventes</title>
           <style>
             * { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; }
             h1 { font-size: 18px; margin: 0 0 12px 0; }
@@ -325,17 +303,14 @@ const Sorties = () => {
             th, td { border: 1px solid #e5e7eb; padding: 8px; font-size: 12px; }
             th { background: #f9fafb; text-align: left; }
             .right { text-align: right; }
-            @page { margin: 16mm; }
+            @page { margin: 14mm; }
           </style>
         </head>
         <body>
           <h1>Liste des Ventes</h1>
           <div>${contenu}</div>
           <script>
-            window.onload = function(){
-              window.print();
-              window.onafterprint = () => window.close();
-            };
+            window.onload = function(){ window.print(); window.onafterprint = () => window.close(); };
           </script>
         </body>
       </html>
@@ -344,50 +319,39 @@ const Sorties = () => {
   };
 
   return (
-    <div className="p-4 sm:p-8 bg-gray-100 min-h-screen">
+    <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
       <div className="w-full max-w-[1400px] mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Section Sorties</h1>
+        <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-gray-900">Section Sorties</h1>
 
-        {/* Succès */}
+        {/* Messages d'interface */}
         {succes && (
-          <div className="mb-4 p-3 sm:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 flex items-start justify-between">
-            <span className="text-sm sm:text-base font-medium">{succes}</span>
-            <button
-              onClick={() => setSucces('')}
-              className="ml-4 p-1 rounded hover:bg-green-100 text-green-700"
-              aria-label="Fermer le message de succès"
-            >
+          <div className="mb-4 p-3 md:p-4 rounded-xl border border-green-200 bg-green-50 text-green-800 flex items-start justify-between">
+            <span className="text-sm md:text-base font-medium">{succes}</span>
+            <button onClick={() => setSucces('')} className="ml-4 p-1 rounded hover:bg-green-100 text-green-700" aria-label="Fermer le message de succès">
+              <FaTimes />
+            </button>
+          </div>
+        )}
+        {erreur && (
+          <div className="mb-4 p-3 md:p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between">
+            <span className="text-sm md:text-base font-medium">{erreur}</span>
+            <button onClick={() => setErreur('')} className="ml-4 p-1 rounded hover:bg-red-100 text-red-700" aria-label="Fermer le message d'erreur">
               <FaTimes />
             </button>
           </div>
         )}
 
-        {/* Erreur */}
-        {error && (
-          <div className="mb-4 p-3 sm:p-4 rounded-xl border border-red-200 bg-red-50 text-red-800 flex items-start justify-between">
-            <span className="text-sm sm:text-base font-medium">{error}</span>
+        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg">
+          {/* Barre d’outils (hors conteneur scrollable) */}
+          <div className="w-full flex items-center gap-3 justify-between mb-4 flex-wrap">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-800">Liste des Ventes</h2>
             <button
-              onClick={() => setError('')}
-              className="ml-4 p-1 rounded hover:bg-red-100 text-red-700"
-              aria-label="Fermer le message d'erreur"
-            >
-              <FaTimes />
-            </button>
-          </div>
-        )}
-
-        <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
-          {/* Barre d’outils responsive */}
-          <div className="w-full flex flex-wrap items-center gap-3 justify-between mb-4">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Liste des Ventes</h2>
-            <button
-              onClick={handleImprimer}
+              onClick={imprimerListe}
               className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
               aria-label="Imprimer la liste"
             >
               <FaPrint />
-              <span className="hidden xs:inline">Imprimer la liste</span>
-              <span className="xs:hidden">Imprimer</span>
+              <span>Imprimer la liste</span>
             </button>
           </div>
 
@@ -396,29 +360,29 @@ const Sorties = () => {
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
             </div>
           ) : (
-            // Conteneur scrollable + sticky actions pour iPad
+            // Conteneur scrollable : la colonne Actions est sticky et toujours visible
             <div className="relative overflow-x-auto rounded-xl border border-gray-100">
               <div ref={tableRef}>
                 <table className="min-w-[1200px] w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
 
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
 
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
-                      <th className="px-3 sm:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
+                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
 
-                      {/* Colonne sticky */}
-                      <th className="px-3 sm:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[150px] sticky right-0 bg-gray-50">
+                      {/* Sticky Actions */}
+                      <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[170px] sticky right-0 bg-gray-50 z-20">
                         Actions
                       </th>
                     </tr>
@@ -432,53 +396,53 @@ const Sorties = () => {
                           const paye  = Number(vente.montant_paye) || 0;
                           const reste = Math.max(total - paye, 0);
                           const statutVenteAffiche = deriverStatutVente(vente);
-                          const isItemActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
+                          const estActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
                           return (
-                            <tr key={item.id} className={!isItemActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
+                            <tr key={item.id} className={!estActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
                               {index === 0 && (
                                 <>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formatDate(vente.date_vente)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formaterDate(vente.date_vente)}
                                   </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {getClientName(vente.client_id)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {nomClient(vente.client_id)}
                                   </td>
                                 </>
                               )}
 
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
-                              <td className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{formatPrice(item.prix_unitaire_negocie)}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
+                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{formaterPrix(item.prix_unitaire_negocie)}</td>
 
                               {index === 0 && (
                                 <>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formatPrice(total)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formaterPrix(total)}
                                   </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formatPrice(paye)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                    {formaterPrix(paye)}
                                   </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
-                                    {formatPrice(reste)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
+                                    {formaterPrix(reste)}
                                   </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 sm:px-4 py-4 whitespace-nowrap border-r border-gray-200">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(statutVenteAffiche)}`}>
-                                      {getSaleStatusLabel(statutVenteAffiche)}
+                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap border-r border-gray-200">
+                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${couleurStatutVente(statutVenteAffiche)}`}>
+                                      {libelleStatutVente(statutVenteAffiche)}
                                     </span>
                                   </td>
                                 </>
                               )}
 
-                              {/* Colonne Actions sticky (toujours visible) */}
-                              <td className="px-2 sm:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white">
+                              {/* Colonne Actions (sticky) */}
+                              <td className="px-2 md:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white z-10">
                                 {index === 0 && Math.max(total - paye, 0) > 0 && (
                                   <button
-                                    onClick={() => handlePaiementClick(vente)}
-                                    className="text-green-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 sm:mr-2"
+                                    onClick={() => ouvrirPaiement(vente)}
+                                    className="text-green-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
                                     title="Gérer le paiement"
                                     aria-label="Gérer le paiement"
                                   >
@@ -487,21 +451,22 @@ const Sorties = () => {
                                 )}
 
                                 {item.statut_vente_item === 'annulé' ? (
-                                  <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('annulé')}`}>{getItemStatusLabel('annulé')}</span>
+                                  <span className={`px-2 py-1 text-xs rounded-full ${couleurStatutArticle('annulé')}`}>{libelleStatutArticle('annulé')}</span>
                                 ) : item.statut_vente_item === 'retourné' ? (
-                                  <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('retourné')}`}>{getItemStatusLabel('retourné')}</span>
+                                  // Afficher explicitement l'action "Remplacé" quand l'article est retourné
+                                  <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Remplacé</span>
                                 ) : (
                                   <>
                                     <button
-                                      onClick={() => handleAnnulationClick(item.id)}
-                                      className="text-red-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 sm:mr-2"
+                                      onClick={() => ouvrirAnnulation(item.id)}
+                                      className="text-red-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
                                       title="Annuler le produit"
                                       aria-label="Annuler le produit"
                                     >
                                       <FaTimes />
                                     </button>
                                     <button
-                                      onClick={() => handleRetourClick(item.id)}
+                                      onClick={() => ouvrirRetour(item.id)}
                                       className="text-yellow-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200"
                                       title="Retourner le produit"
                                       aria-label="Retourner le produit"
@@ -524,23 +489,21 @@ const Sorties = () => {
         </div>
 
         {/* Modale Paiement */}
-        {showPaymentModal && venteForPayment && (
+        {afficherPaiement && ventePourPaiement && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-            <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
+            <div className="bg-white p-4 md:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Gérer le Paiement</h3>
-                <button onClick={() => setShowPaymentModal(false)} className="text-gray-500 hover:text-gray-800">
-                  <FaTimes />
-                </button>
+                <button onClick={() => setAfficherPaiement(false)} className="text-gray-500 hover:text-gray-800"><FaTimes /></button>
               </div>
               <div className="text-sm font-semibold text-gray-700 mb-3">
-                <p>Total : <span className="font-bold">{formatPrice(venteForPayment.montant_total)}</span></p>
-                <p>Payé : <span className="font-bold">{formatPrice(venteForPayment.montant_paye)}</span></p>
+                <p>Total : <span className="font-bold">{formaterPrix(ventePourPaiement.montant_total)}</span></p>
+                <p>Payé : <span className="font-bold">{formaterPrix(ventePourPaiement.montant_paye)}</span></p>
                 <p>Reste : <span className="font-bold text-red-500">
-                  {formatPrice((Number(venteForPayment.montant_total) || 0) - (Number(venteForPayment.montant_paye) || 0))}
+                  {formaterPrix((Number(ventePourPaiement.montant_total) || 0) - (Number(ventePourPaiement.montant_paye) || 0))}
                 </span></p>
-                <p>Statut : <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(deriverStatutVente(venteForPayment))}`}>
-                  {getSaleStatusLabel(deriverStatutVente(venteForPayment))}
+                <p>Statut : <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${couleurStatutVente(deriverStatutVente(ventePourPaiement))}`}>
+                  {libelleStatutVente(deriverStatutVente(ventePourPaiement))}
                 </span></p>
               </div>
               <input
@@ -551,25 +514,23 @@ const Sorties = () => {
                 placeholder="Montant payé"
               />
               <button
-                onClick={handlePaiementSubmit}
+                onClick={soumettrePaiement}
                 className="w-full bg-green-500 text-white font-semibold py-2 rounded-xl hover:bg-green-600 flex items-center justify-center"
-                disabled={isSubmitting}
+                disabled={envoiEnCours}
               >
-                {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer le paiement'}
+                {envoiEnCours ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer le paiement'}
               </button>
             </div>
           </div>
         )}
 
         {/* Modale Annulation */}
-        {showCancelModal && (
+        {afficherAnnulation && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-            <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
+            <div className="bg-white p-4 md:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Annuler le produit</h3>
-                <button onClick={() => setShowCancelModal(false)} className="text-gray-500 hover:text-gray-800">
-                  <FaTimes />
-                </button>
+                <button onClick={() => setAfficherAnnulation(false)} className="text-gray-500 hover:text-gray-800"><FaTimes /></button>
               </div>
               <label className="block text-sm text-gray-700 mb-2">Raison</label>
               <select
@@ -577,30 +538,26 @@ const Sorties = () => {
                 onChange={(e) => setRaisonAnnulation(e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl mb-4 bg-white"
               >
-                {RAISONS_ANNULATION.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
+                {RAISONS_ANNULATION.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <button
-                onClick={handleAnnulationSubmit}
+                onClick={soumettreAnnulation}
                 className="w-full bg-red-500 text-white font-semibold py-2 rounded-xl hover:bg-red-600 flex items-center justify-center"
-                disabled={isSubmitting}
+                disabled={envoiEnCours}
               >
-                {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer l’annulation'}
+                {envoiEnCours ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer l’annulation'}
               </button>
             </div>
           </div>
         )}
 
         {/* Modale Retour */}
-        {showReturnModal && (
+        {afficherRetour && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-            <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
+            <div className="bg-white p-4 md:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Retour défectueux</h3>
-                <button onClick={() => setShowReturnModal(false)} className="text-gray-500 hover:text-gray-800">
-                  <FaTimes />
-                </button>
+                <button onClick={() => setAfficherRetour(false)} className="text-gray-500 hover:text-gray-800"><FaTimes /></button>
               </div>
               <label className="block text-sm text-gray-700 mb-1">Raison</label>
               <select
@@ -608,9 +565,7 @@ const Sorties = () => {
                 onChange={(e) => setRaisonRetour(e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl mb-3 bg-white"
               >
-                {RAISONS_REMPLACEMENT.map((r) => (
-                  <option key={r} value={r}>{r}</option>
-                ))}
+                {RAISONS_REMPLACEMENT.map((r) => <option key={r} value={r}>{r}</option>)}
               </select>
               <label className="block text-sm text-gray-700 mb-1">Quantité retournée</label>
               <input
@@ -622,11 +577,11 @@ const Sorties = () => {
                 placeholder="Quantité"
               />
               <button
-                onClick={handleRetourSubmit}
+                onClick={soumettreRetour}
                 className="w-full bg-yellow-500 text-white font-semibold py-2 rounded-xl hover:bg-yellow-600 flex items-center justify-center"
-                disabled={isSubmitting}
+                disabled={envoiEnCours}
               >
-                {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer le retour'}
+                {envoiEnCours ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer le retour'}
               </button>
             </div>
           </div>
