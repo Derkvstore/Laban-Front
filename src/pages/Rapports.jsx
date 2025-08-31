@@ -5,37 +5,36 @@ import { FaSpinner, FaCalendarAlt, FaTruck, FaUndoAlt, FaFileInvoiceDollar, FaHe
 const Rapports = () => {
   const [reportData, setReportData] = useState({
     stock: [],
-    mouvements: {
-      cartons: {},
-      arrivages: {},
-      accessoires: {},
-    },
+    mouvements: { cartons: {}, arrivages: {}, accessoires: {} },
   });
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Utilisation de la variable d'environnement VITE_API_URL
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = import.meta.env?.VITE_API_URL || (import.meta.env?.PROD ? '' : 'http://localhost:3001');
 
   const fetchReportData = async () => {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('token');
-      // Récupérer le stock actuel
+
+      // Inventaire actuel
       const stockResponse = await axios.get(`${API_URL}/api/products`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      // Récupérer les mouvements de stock journaliers
+      // Rapport du jour
       const mouvementsResponse = await axios.get(`${API_URL}/api/rapports/daily?date=${selectedDate}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` }
       });
-      
+
+      // ✅ ne garder que "mouvements_du_jour" pour les cartes
+      const mouvements = mouvementsResponse.data?.mouvements_du_jour || { cartons:{}, arrivages:{}, accessoires:{} };
+
       setReportData({
-        stock: stockResponse.data,
-        mouvements: mouvementsResponse.data,
+        stock: stockResponse.data || [],
+        mouvements
       });
 
     } catch (err) {
@@ -48,6 +47,7 @@ const Rapports = () => {
 
   useEffect(() => {
     fetchReportData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
   const formatDate = (dateString) => {
@@ -56,7 +56,7 @@ const Rapports = () => {
     return date.toLocaleDateString('fr-FR', options);
   };
   
-  const filteredStock = reportData.stock.filter(product => {
+  const filteredStock = (reportData.stock || []).filter(product => {
     const searchLower = searchTerm.toLowerCase();
     return (
       (product.marque && product.marque.toLowerCase().includes(searchLower)) ||
@@ -84,13 +84,16 @@ const Rapports = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              />
-              <button className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center justify-center">
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt className="text-gray-500" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+                />
+              </div>
+              <button className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center justify-center" onClick={() => window.print()}>
                 <FaFileInvoiceDollar className="mr-2" />
                 Imprimer
               </button>
@@ -107,34 +110,34 @@ const Rapports = () => {
               <div className="mb-8">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">Mouvements de Stock Journaliers ({formatDate(selectedDate)})</h2>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  {/* Carte pour les cartons */}
-                  <div key="cartons" className="bg-gray-50 p-6 rounded-2xl shadow-md">
+                  {/* Cartons */}
+                  <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <h3 className="text-lg font-bold mb-2 text-blue-600 flex items-center"><FaTruck className="mr-2" /> Mobiles en Carton</h3>
-                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.cartons?.stockHier || 0}</span></p>
-                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.cartons?.ajouteToday || 0}</span></p>
-                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.cartons?.venduToday || 0}</span></p>
-                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.cartons?.retourneToday || 0}</span></p>
+                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.cartons?.stockHier ?? 0}</span></p>
+                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.cartons?.ajouteToday ?? 0}</span></p>
+                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.cartons?.venduToday ?? 0}</span></p>
+                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.cartons?.retourneToday ?? 0}</span></p>
                   </div>
-                  {/* Carte pour les arrivages */}
-                  <div key="arrivages" className="bg-gray-50 p-6 rounded-2xl shadow-md">
+                  {/* Arrivages */}
+                  <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <h3 className="text-lg font-bold mb-2 text-green-600 flex items-center"><FaUndoAlt className="mr-2" /> Mobiles en Arrivage</h3>
-                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.arrivages?.stockHier || 0}</span></p>
-                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.arrivages?.ajouteToday || 0}</span></p>
-                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.arrivages?.venduToday || 0}</span></p>
-                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.arrivages?.retourneToday || 0}</span></p>
+                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.arrivages?.stockHier ?? 0}</span></p>
+                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.arrivages?.ajouteToday ?? 0}</span></p>
+                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.arrivages?.venduToday ?? 0}</span></p>
+                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.arrivages?.retourneToday ?? 0}</span></p>
                   </div>
-                  {/* Carte pour les accessoires */}
-                  <div key="accessoires" className="bg-gray-50 p-6 rounded-2xl shadow-md">
+                  {/* Accessoires */}
+                  <div className="bg-gray-50 p-6 rounded-2xl shadow-md">
                     <h3 className="text-lg font-bold mb-2 text-purple-600 flex items-center"><FaHeadphones className="mr-2" /> Accessoires</h3>
-                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.accessoires?.stockHier || 0}</span></p>
-                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.accessoires?.ajouteToday || 0}</span></p>
-                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.accessoires?.venduToday || 0}</span></p>
-                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.accessoires?.retourneToday || 0}</span></p>
+                    <p className="text-sm">Stock d'hier: <span className="font-semibold">{reportData.mouvements.accessoires?.stockHier ?? 0}</span></p>
+                    <p className="text-sm text-green-600">Ajouté aujourd'hui: +<span className="font-semibold">{reportData.mouvements.accessoires?.ajouteToday ?? 0}</span></p>
+                    <p className="text-sm text-red-600">Vendu aujourd'hui: -<span className="font-semibold">{reportData.mouvements.accessoires?.venduToday ?? 0}</span></p>
+                    <p className="text-sm text-yellow-600">Retourné aujourd'hui: -<span className="font-semibold">{reportData.mouvements.accessoires?.retourneToday ?? 0}</span></p>
                   </div>
                 </div>
               </div>
 
-              {/* Tableau de stock */}
+              {/* Inventaire Actuel */}
               <div className="overflow-x-auto">
                 <h2 className="text-xl font-semibold mb-4 text-gray-800">Inventaire Actuel</h2>
                 <table className="min-w-full divide-y divide-gray-200">
