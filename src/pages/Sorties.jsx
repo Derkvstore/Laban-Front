@@ -264,7 +264,7 @@ const Sorties = () => {
       const token = localStorage.getItem('token');
       await axios.post(
         `${API_URL}/api/ventes/return-defective`,
-        { vente_item_id: venteItemIdSelectionne, reason: raisonRetour, quantite_retournee: q },
+        { vente_item_id: venteItemIdSelectionnee, reason: raisonRetour, quantite_retournee: q },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       await recupererVentes();
@@ -360,106 +360,148 @@ const Sorties = () => {
               <FaSpinner className="animate-spin text-4xl text-blue-600" />
             </div>
           ) : (
-            // Conteneur scrollable : la colonne Actions est sticky et toujours visible
-            <div className="relative overflow-x-auto rounded-xl border border-gray-100">
-              <div ref={tableRef}>
-                <table className="min-w-[1200px] w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+            <>
+              {/* Version pour grands écrans (table) */}
+              <div className="hidden md:block relative overflow-x-auto rounded-xl border border-gray-100">
+                <div ref={tableRef}>
+                  <table className="min-w-[1200px] w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
+                        <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
+                        <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[170px] sticky right-0 bg-gray-50 z-20">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {ventes.map((vente) => (
+                        <React.Fragment key={vente.id}>
+                          {vente.vente_items.map((item, index) => {
+                            const total = Number(vente.montant_total) || 0;
+                            const paye = Number(vente.montant_paye) || 0;
+                            const reste = Math.max(total - paye, 0);
+                            const statutVenteAffiche = deriverStatutVente(vente);
+                            const estActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
-
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
-                      <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-
-                      {/* Sticky Actions */}
-                      <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[170px] sticky right-0 bg-gray-50 z-20">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {ventes.map((vente) => (
-                      <React.Fragment key={vente.id}>
-                        {vente.vente_items.map((item, index) => {
-                          const total = Number(vente.montant_total) || 0;
-                          const paye  = Number(vente.montant_paye) || 0;
-                          const reste = Math.max(total - paye, 0);
-                          const statutVenteAffiche = deriverStatutVente(vente);
-                          const estActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
-
-                          return (
-                            <tr key={item.id} className={!estActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
-                              {index === 0 && (
-                                <>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formaterDate(vente.date_vente)}
-                                  </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {nomClient(vente.client_id)}
-                                  </td>
-                                </>
-                              )}
-
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
-                              <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{formaterPrix(item.prix_unitaire_negocie)}</td>
-
-                              {index === 0 && (
-                                <>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formaterPrix(total)}
-                                  </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
-                                    {formaterPrix(paye)}
-                                  </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
-                                    {formaterPrix(reste)}
-                                  </td>
-                                  <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap border-r border-gray-200">
-                                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${couleurStatutVente(statutVenteAffiche)}`}>
-                                      {libelleStatutVente(statutVenteAffiche)}
-                                    </span>
-                                  </td>
-                                </>
-                              )}
-
-                              {/* Colonne Actions (sticky) */}
-                              <td className="px-2 md:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white z-10">
-                                {index === 0 && Math.max(total - paye, 0) > 0 && (
-                                  <button
-                                    onClick={() => ouvrirPaiement(vente)}
-                                    className="text-green-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
-                                    title="Gérer le paiement"
-                                    aria-label="Gérer le paiement"
-                                  >
-                                    <FaMoneyBillWave />
-                                  </button>
+                            return (
+                              <tr key={item.id} className={!estActifOuVendu ? 'bg-gray-100 text-gray-500' : ''}>
+                                {index === 0 && (
+                                  <>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                      {formaterDate(vente.date_vente)}
+                                    </td>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                      {nomClient(vente.client_id)}
+                                    </td>
+                                  </>
                                 )}
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.marque}</td>
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.modele}</td>
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.stockage}</td>
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.type}</td>
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{item.quantite_vendue}</td>
+                                <td className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700">{formaterPrix(item.prix_unitaire_negocie)}</td>
+                                {index === 0 && (
+                                  <>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                      {formaterPrix(total)}
+                                    </td>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                      {formaterPrix(paye)}
+                                    </td>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
+                                      {formaterPrix(reste)}
+                                    </td>
+                                    <td rowSpan={vente.vente_items.length} className="px-3 md:px-4 py-4 whitespace-nowrap border-r border-gray-200">
+                                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${couleurStatutVente(statutVenteAffiche)}`}>
+                                        {libelleStatutVente(statutVenteAffiche)}
+                                      </span>
+                                    </td>
+                                  </>
+                                )}
+                                <td className="px-2 md:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white z-10">
+                                  {index === 0 && Math.max(total - paye, 0) > 0 && (
+                                    <button
+                                      onClick={() => ouvrirPaiement(vente)}
+                                      className="text-green-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
+                                      title="Gérer le paiement"
+                                      aria-label="Gérer le paiement"
+                                    >
+                                      <FaMoneyBillWave />
+                                    </button>
+                                  )}
+                                  {item.statut_vente_item === 'annulé' ? (
+                                    <span className={`px-2 py-1 text-xs rounded-full ${couleurStatutArticle('annulé')}`}>{libelleStatutArticle('annulé')}</span>
+                                  ) : item.statut_vente_item === 'retourné' ? (
+                                    <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Remplacé</span>
+                                  ) : (
+                                    <>
+                                      <button
+                                        onClick={() => ouvrirAnnulation(item.id)}
+                                        className="text-red-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
+                                        title="Annuler le produit"
+                                        aria-label="Annuler le produit"
+                                      >
+                                        <FaTimes />
+                                      </button>
+                                      <button
+                                        onClick={() => ouvrirRetour(item.id)}
+                                        className="text-yellow-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200"
+                                        title="Retourner le produit"
+                                        aria-label="Retourner le produit"
+                                      >
+                                        <FaSyncAlt />
+                                      </button>
+                                    </>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </React.Fragment>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
-                                {item.statut_vente_item === 'annulé' ? (
-                                  <span className={`px-2 py-1 text-xs rounded-full ${couleurStatutArticle('annulé')}`}>{libelleStatutArticle('annulé')}</span>
-                                ) : item.statut_vente_item === 'retourné' ? (
-                                  // Afficher explicitement l'action "Remplacé" quand l'article est retourné
-                                  <span className="px-2 py-1 text-xs rounded-full bg-orange-100 text-orange-800">Remplacé</span>
-                                ) : (
+              {/* Version pour petits écrans (liste de cartes) */}
+              <div className="md:hidden space-y-4">
+                {ventes.map((vente) => (
+                  <div key={vente.id} className="bg-white rounded-2xl shadow-md p-4 space-y-4">
+                    <div className="flex justify-between items-center pb-2 border-b border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-900">{nomClient(vente.client_id)}</h4>
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${couleurStatutVente(deriverStatutVente(vente))}`}>
+                        {libelleStatutVente(deriverStatutVente(vente))}
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {vente.vente_items.map((item) => {
+                        const estActifOuVendu = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
+                        return (
+                          <div key={item.id} className={`p-3 rounded-lg ${!estActifOuVendu ? 'bg-gray-50' : ''} border border-gray-100`}>
+                            <div className="flex justify-between items-start mb-2">
+                              <span className={`text-xs font-medium px-2 py-1 rounded-full ${couleurStatutArticle(item.statut_vente_item)}`}>
+                                {libelleStatutArticle(item.statut_vente_item)}
+                              </span>
+                              <div className="flex items-center space-x-2 text-xl">
+                                {item.statut_vente_item !== 'annulé' && item.statut_vente_item !== 'retourné' && (
                                   <>
                                     <button
                                       onClick={() => ouvrirAnnulation(item.id)}
-                                      className="text-red-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200 mr-1.5 md:mr-2"
+                                      className="text-red-600 hover:text-red-800 p-1"
                                       title="Annuler le produit"
                                       aria-label="Annuler le produit"
                                     >
@@ -467,7 +509,7 @@ const Sorties = () => {
                                     </button>
                                     <button
                                       onClick={() => ouvrirRetour(item.id)}
-                                      className="text-yellow-600 hover:bg-gray-100 p-2.5 rounded-full transition-colors duration-200"
+                                      className="text-yellow-600 hover:text-yellow-800 p-1"
                                       title="Retourner le produit"
                                       aria-label="Retourner le produit"
                                     >
@@ -475,20 +517,45 @@ const Sorties = () => {
                                     </button>
                                   </>
                                 )}
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </React.Fragment>
-                    ))}
-                  </tbody>
-                </table>
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-700 grid grid-cols-2 gap-2">
+                              <div><span className="font-semibold">Article :</span> {item.marque} {item.modele}</div>
+                              <div><span className="font-semibold">Capacité :</span> {item.stockage}</div>
+                              <div><span className="font-semibold">Quantité :</span> {item.quantite_vendue}</div>
+                              <div><span className="font-semibold">Prix :</span> {formaterPrix(item.prix_unitaire_negocie)}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="text-sm pt-2 border-t border-gray-200">
+                      <p>Date : {formaterDate(vente.date_vente)}</p>
+                      <p>Total : {formaterPrix(Number(vente.montant_total) || 0)}</p>
+                      <p>Payé : {formaterPrix(Number(vente.montant_paye) || 0)}</p>
+                      <p>Reste : <span className="text-red-500 font-semibold">{formaterPrix(Math.max(Number(vente.montant_total) - Number(vente.montant_paye), 0))}</span></p>
+                    </div>
+
+                    {Math.max(Number(vente.montant_total) - Number(vente.montant_paye), 0) > 0 && (
+                      <button
+                        onClick={() => ouvrirPaiement(vente)}
+                        className="w-full mt-3 bg-green-600 text-white font-semibold py-2 rounded-xl hover:bg-green-700 flex items-center justify-center"
+                        title="Gérer le paiement"
+                        aria-label="Gérer le paiement"
+                      >
+                        <FaMoneyBillWave className="mr-2" />
+                        <span>Payer</span>
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
+            </>
           )}
         </div>
 
-        {/* Modale Paiement */}
+        {/* Modales (inchangées) */}
         {afficherPaiement && ventePourPaiement && (
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 md:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
