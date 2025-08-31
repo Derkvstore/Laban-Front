@@ -30,6 +30,8 @@ import Dettes from './Dettes';
 import Rapports from './Rapports';
 import Références from './Références';
 import InvestissementProduits from './InvestissementProduits';
+import RapportJournalier from './RapportJournalier';
+
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -102,6 +104,8 @@ const Dashboard = () => {
         return <Dettes />;
       case 'rapports':
         return <Rapports />;
+         case 'rapportJournalier':
+        return <RapportJournalier />;
       case 'references':
         return <Références />;
       default:
@@ -122,6 +126,7 @@ const Dashboard = () => {
     { name: 'Bénéfices', icon: FaChartBar, section: 'benefices' },
     { name: 'Dettes', icon: FaRegClock, section: 'dettes' },
     { name: 'Rapports', icon: FaFileInvoiceDollar, section: 'rapports' },
+   { name: 'Rapport Journalier', icon: FaChartBar, section: 'rapportJournalier' },
     { name: 'Investissement Produits', icon: FaFileInvoiceDollar, section: 'investissementProduits' },
   ];
 
