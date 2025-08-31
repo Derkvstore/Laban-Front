@@ -5,18 +5,16 @@ import {
   FaCalendarAlt, 
   FaMoneyBillWave, 
   FaTimesCircle 
-
 } from 'react-icons/fa';
 
+// Affichage "FCFA" homogène
 const formatCFA = (amount) => {
   const n = Number(amount);
   if (Number.isNaN(n)) return 'N/A';
   return n.toLocaleString('fr-FR', {
-    style: 'currency',
-    currency: 'XOF',
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  });
+  }) + ' FCFA';
 };
 
 const formatDateTime = (dateString) => {
@@ -29,10 +27,12 @@ const formatDateTime = (dateString) => {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit', // secondes demandées
   });
 };
 
 export default function Benefices() {
+  // on garde les mêmes noms d’états que chez toi
   const [clients, setClients] = useState([]);
   const [ventes, setVentes] = useState([]);
   const [items, setItems] = useState([]);
@@ -41,59 +41,112 @@ export default function Benefices() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
-  // Base URL backend : privilégie VITE_API_URL
+  // Base URL backend
   const API_URL =
     import.meta.env?.VITE_API_URL ||
     (import.meta.env?.PROD ? '' : 'http://localhost:3001');
 
-  useEffect(() => {
-    const fetchAll = async () => {
-      setLoading(true);
-      setError('');
-      try {
-        const token = localStorage.getItem('token');
-        const headers = { Authorization: `Bearer ${token}` };
+  // On s’appuie sur l’API /api/benefices qui renvoie UNIQUEMENT les lignes "vendu"
+  const chargerBenefices = async (dateStr) => {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('token');
+      const headers = { Authorization: `Bearer ${token}` };
 
-        const [cliRes, venRes, itRes] = await Promise.all([
-          axios.get(`${API_URL}/api/clients`, { headers }),
-          axios.get(`${API_URL}/api/ventes`, { headers }),
-          axios.get(`${API_URL}/api/vente_items`, { headers }),
-        ]);
+      const url = new URL(`${API_URL}/api/benefices`);
+      if (dateStr) url.searchParams.set('date', dateStr);
 
-        setClients(cliRes.data || []);
-        setVentes(venRes.data || []);
-        setItems(itRes.data || []);
-      } catch (err) {
-        console.error('Erreur chargement données:', err);
-        const msg =
-          err?.response?.status === 401
-            ? 'Non autorisé (401). Reconnectez-vous pour obtenir un nouveau jeton.'
-            : "Impossible de charger les données. Vérifiez l'API et le token.";
-        setError(msg);
-      } finally {
-        setLoading(false);
+      const res = await axios.get(url.toString(), { headers });
+      const data = res.data || {};
+
+      // sold_items contient déjà uniquement les items "vendu" (et ventes "payé")
+      const sold = Array.isArray(data.sold_items) ? data.sold_items : [];
+
+      // On reconstruit clients / ventes / items avec les MÊMES CHAMPS
+      // pour ne pas changer ta logique plus bas.
+      const mapClients = new Map();
+      const mapVentes  = new Map();
+      const newItems   = [];
+
+      for (const r of sold) {
+        // clients
+        if (!mapClients.has(r.client_id)) {
+          mapClients.set(r.client_id, { id: r.client_id, nom: r.client_nom });
+        }
+        // ventes
+        if (!mapVentes.has(r.vente_id)) {
+          mapVentes.set(r.vente_id, {
+            id: r.vente_id,
+            client_id: r.client_id,
+            date_vente: r.date_vente,
+            // ces champs ne sont pas utiles ici pour l’affichage du bénéfice ligne
+            montant_total: 0,
+            montant_paye: 0,
+            statut_paiement: 'payé',
+          });
+        }
+        // items (forme identique à vente_items)
+        newItems.push({
+          id: r.vente_item_id,
+          vente_id: r.vente_id,
+          // product_id non nécessaire ici
+          quantite_vendue: Number(r.quantite_vendue || 1),
+          prix_unitaire_negocie: Number(r.prix_unitaire_vente || 0),
+          prix_unitaire_achat_au_moment_vente: Number(r.prix_unitaire_achat || 0),
+          marque: r.marque,
+          modele: r.modele,
+          stockage: r.stockage,
+          type: r.type,
+          type_carton: r.type_carton,
+          statut_vente_item: 'vendu', // essentiel pour le filtre
+        });
       }
-    };
 
-    fetchAll();
+      setClients(Array.from(mapClients.values()));
+      setVentes(Array.from(mapVentes.values()));
+      setItems(newItems);
+    } catch (err) {
+      console.error('Erreur chargement bénéfices:', err);
+      const msg =
+        err?.response?.status === 401
+          ? 'Non autorisé (401). Reconnectez-vous pour obtenir un nouveau jeton.'
+          : "Impossible de charger les bénéfices. Vérifiez l'API et le token.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Chargement initial
+  useEffect(() => {
+    chargerBenefices('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Recharger quand la date change
+  useEffect(() => {
+    chargerBenefices(selectedDate);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate]);
 
   // Map rapides
   const clientById = useMemo(() => new Map(clients.map((c) => [c.id, c])), [clients]);
   const venteById = useMemo(() => new Map(ventes.map((v) => [v.id, v])), [ventes]);
 
-  // Lignes : uniquement les items VENDUS (exclut actif/retourné/annulé), avec filtre par date si renseigné
+  // Lignes : uniquement les items VENDUS (exclut actif/retourné/annulé)
   const rows = useMemo(() => {
     if (!items.length) return [];
     const list = [];
 
     for (const it of items) {
-      if (it?.statut_vente_item !== 'vendu') continue; // <= uniquement vendu
+      if (it?.statut_vente_item !== 'vendu') continue;
 
       const v = venteById.get(it.vente_id);
       if (!v) continue;
 
+      // le filtre par date est déjà fait côté backend,
+      // mais on garde ta logique au cas où
       if (selectedDate) {
         const d = new Date(v.date_vente);
         const y = d.getFullYear();
