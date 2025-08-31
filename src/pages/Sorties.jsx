@@ -64,7 +64,7 @@ const Sorties = () => {
   const [envoiEnCours, setEnvoiEnCours] = useState(false);
   const [ventePourPaiement, setVentePourPaiement] = useState(null);
 
-  // Réf pour impression ciblée
+  // Réf impression
   const tableRef = useRef(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
@@ -102,7 +102,7 @@ const Sorties = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Date avec heure:minute:seconde
+  // Date avec secondes
   const formaterDate = (dateString) => {
     const d = new Date(dateString);
     return isNaN(d.getTime())
@@ -129,7 +129,7 @@ const Sorties = () => {
     return c ? c.nom : 'N/A';
   };
 
-  // --- Logique d'affichage (statut vente) ---
+  // --- Statut vente (affichage) ---
   const tousArticlesClotures = (vente) =>
     (vente.vente_items || []).length > 0 &&
     vente.vente_items.every(it => it.statut_vente_item === 'annulé' || it.statut_vente_item === 'retourné');
@@ -180,7 +180,7 @@ const Sorties = () => {
       case 'vendu': return 'Vendu';
       case 'actif': return 'En Cours';
       case 'annulé': return 'Annulé';
-      case 'retourné': return 'Remplacé'; // affichage demandé
+      case 'retourné': return 'Remplacé';
       default: return statut || '—';
     }
   };
@@ -264,7 +264,7 @@ const Sorties = () => {
       const token = localStorage.getItem('token');
       await axios.post(
         `${API_URL}/api/ventes/return-defective`,
-        { vente_item_id: venteItemIdSelectionnee, reason: raisonRetour, quantite_retournee: q },
+        { vente_item_id: venteItemIdSelectionne, reason: raisonRetour, quantite_retournee: q }, // <-- CORRECTION du nom de variable
         { headers: { Authorization: `Bearer ${token}` } }
       );
       await recupererVentes();
@@ -319,7 +319,7 @@ const Sorties = () => {
 
   return (
     <div className="p-4 md:p-8 bg-gray-100 min-h-screen">
-      <div className="w-full max-w-[1400px] mx-auto">
+      <div className="w-full max-w-screen-2xl mx-auto">
         <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6 text-gray-900">Section Sorties</h1>
 
         {/* Messages d'interface */}
@@ -340,13 +340,13 @@ const Sorties = () => {
           </div>
         )}
 
-        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg">
+        <div className="bg-white p-4 md:p-6 rounded-2xl shadow-lg overflow-visible">
           {/* Barre d’outils (hors conteneur scrollable) */}
           <div className="w-full flex items-center gap-3 justify-between mb-4 flex-wrap">
             <h2 className="text-lg md:text-xl font-semibold text-gray-800">Liste des Ventes</h2>
             <button
               onClick={imprimerListe}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition shrink-0"
               aria-label="Imprimer la liste"
             >
               <FaPrint />
@@ -360,7 +360,7 @@ const Sorties = () => {
             </div>
           ) : (
             <>
-              {/* Version pour grands écrans (table) */}
+              {/* Grands écrans */}
               <div className="hidden md:block relative overflow-x-auto rounded-xl border border-gray-100">
                 <div ref={tableRef}>
                   <table className="min-w-[1200px] w-full divide-y divide-gray-200">
@@ -378,7 +378,7 @@ const Sorties = () => {
                         <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                         <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                         <th className="px-3 md:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
-                        <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[170px] sticky right-0 bg-gray-50 z-20">
+                        <th className="px-3 md:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[170px] sticky right-0 bg-gray-50 z-50">
                           Actions
                         </th>
                       </tr>
@@ -429,7 +429,7 @@ const Sorties = () => {
                                     </td>
                                   </>
                                 )}
-                                <td className="px-2 md:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white z-10">
+                                <td className="px-2 md:px-3 py-3 whitespace-nowrap text-center text-lg font-medium sticky right-0 bg-white z-40">
                                   {index === 0 && Math.max(total - paye, 0) > 0 && (
                                     <button
                                       onClick={() => ouvrirPaiement(vente)}
@@ -475,7 +475,7 @@ const Sorties = () => {
                 </div>
               </div>
 
-              {/* Version pour petits écrans (liste de cartes) */}
+              {/* Petits écrans */}
               <div className="md:hidden space-y-4">
                 {ventes.map((vente) => (
                   <div key={vente.id} className="bg-white rounded-2xl shadow-md p-4 space-y-4">

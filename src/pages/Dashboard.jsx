@@ -57,7 +57,7 @@ const Dashboard = () => {
     localStorage.setItem('activeSection', activeSection);
   }, [activeSection]);
 
-  // Fermeture sidebar au clavier (Échap) pour l’accessibilité
+  // Fermeture sidebar au clavier (Échap)
   useEffect(() => {
     const onKeyDown = (e) => {
       if (e.key === 'Escape') setIsSidebarOpen(false);
@@ -84,7 +84,7 @@ const Dashboard = () => {
         return <Clients />;
       case 'fournisseurs':
         return <Fournisseurs />;
-        case 'investissementProduits':
+      case 'investissementProduits':
         return <InvestissementProduits />;
       case 'produits':
         return <Produits />;
@@ -126,7 +126,7 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="flex min-h-dvh bg-gray-100 font-sans antialiased text-gray-900 overflow-x-hidden">
+    <div className="flex min-h-dvh bg-gray-100 font-sans antialiased text-gray-900">
       {/* Bouton menu mobile (toujours accessible en haut) */}
       <button
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -218,7 +218,7 @@ const Dashboard = () => {
         className={[
           'flex-1',
           'p-3 sm:p-5 lg:p-8',
-          'md:ml-0', // la sidebar est relative en md+
+          'md:ml-0',
           'w-full max-w-[1400px] mx-auto'
         ].join(' ')}
       >
