@@ -95,7 +95,7 @@ const Sorties = () => {
   const getSaleStatusLabel = (status) => {
     switch (status) {
       case 'payé':
-        return 'Payé';
+        return 'Vendu';
       case 'paiement_partiel':
         return 'Partiel';
       case 'en_attente':
@@ -133,7 +133,8 @@ const Sorties = () => {
       case 'annulé':
         return 'Annulé';
       case 'retourné':
-        return 'Retour';
+        // Affichage voulu “Remplacer” pour un retour défectueux
+        return 'Remplacer';
       default:
         return status || '—';
     }
@@ -257,146 +258,136 @@ const Sorties = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    {/* <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Vente</th> */}
+                    {/* Date & Client (par vente) */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+
+                    {/* Détails article */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Marque</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Modèle</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Capacité</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stockage</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix Unitaire</th>
+
+                    {/* Totaux (par vente) */}
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Vente</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant Payé</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Reste à Payer</th>
                     <th className="px-3 sm:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Statut vente</th>
+
+                    {/* Actions (par article) */}
                     <th className="px-3 sm:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
 
                 <tbody className="bg-white divide-y divide-gray-200">
-  {ventes.map((vente) => (
-    <React.Fragment key={vente.id}>
-      {vente.vente_items.map((item, index) => {
-        const reste = Number(vente.montant_total) - Number(vente.montant_paye);
-        return (
-          <tr
-            key={item.id}
-            className={
-              item.statut_vente_item !== 'actif' && item.statut_vente_item !== 'vendu'
-                ? 'bg-gray-100 text-gray-500'
-                : ''
-            }
-          >
-            {/* Lignes pour les informations de Vente (avec rowSpan) */}
-            {index === 0 && (
-              <>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
-                >
-                  {formatDate(vente.date_vente)}
-                </td>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
-                >
-                  {getClientName(vente.client_id)}
-                </td>
-              </>
-            )}
+                  {ventes.map((vente) => (
+                    <React.Fragment key={vente.id}>
+                      {vente.vente_items.map((item, index) => {
+                        const reste = Number(vente.montant_total) - Number(vente.montant_paye);
+                        const isItemActif = item.statut_vente_item === 'actif' || item.statut_vente_item === 'vendu';
 
-            {/* Lignes pour les détails de l'article (sans rowSpan) */}
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-              {item.marque}
-            </td>
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {item.modele}
-            </td>
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {item.type}
-            </td>
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {item.stockage}
-            </td>
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {item.quantite_vendue}
-            </td>
-            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-              {formatPrice(item.prix_unitaire_negocie)}
-            </td>
+                        return (
+                          <tr
+                            key={item.id}
+                            className={!isItemActif ? 'bg-gray-100 text-gray-500' : ''}
+                          >
+                            {/* Date / Client (rowSpan) */}
+                            {index === 0 && (
+                              <>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
+                                  {formatDate(vente.date_vente)}
+                                </td>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200">
+                                  {getClientName(vente.client_id)}
+                                </td>
+                              </>
+                            )}
 
-            {/* Lignes pour les totaux de Vente (avec rowSpan) */}
-            {index === 0 && (
-              <>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
-                >
-                  {formatPrice(vente.montant_total)}
-                </td>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-500 border-r border-gray-200"
-                >
-                  {formatPrice(vente.montant_paye)}
-                </td>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200"
-                >
-                  {formatPrice(reste)}
-                </td>
-                <td
-                  rowSpan={vente.vente_items.length}
-                  className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200"
-                >
-                  <span
-                    className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(
-                      vente.statut_paiement
-                    )}`}
-                  >
-                    {getSaleStatusLabel(vente.statut_paiement)}
-                  </span>
-                </td>
-              </>
-            )}
+                            {/* Article */}
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {item.marque}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {item.modele}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {item.stockage}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {item.type}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {item.quantite_vendue}
+                            </td>
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700">
+                              {formatPrice(item.prix_unitaire_negocie)}
+                            </td>
 
-            {/* Ligne pour les actions (avec rowSpan) */}
-            {index === 0 && (
-              <td
-                rowSpan={vente.vente_items.length}
-                className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium"
-              >
-                <button
-                  onClick={() => handlePaiementClick(vente)}
-                  className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
-                  title="Gérer le paiement"
-                >
-                  <FaMoneyBillWave />
-                </button>
-                <button
-                  onClick={() => handleAnnulationClick(item.id)}
-                  className="text-red-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
-                  title="Annuler le produit"
-                >
-                  <FaTimes />
-                </button>
-                <button
-                  onClick={() => handleRetourClick(item.id)}
-                  className="text-yellow-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
-                  title="Retourner le produit"
-                >
-                  <FaSyncAlt />
-                </button>
-              </td>
-            )}
-          </tr>
-        );
-      })}
-    </React.Fragment>
-  ))}
-</tbody>
+                            {/* Totaux & statut vente (rowSpan) */}
+                            {index === 0 && (
+                              <>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                  {formatPrice(vente.montant_total)}
+                                </td>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm text-gray-700 border-r border-gray-200">
+                                  {formatPrice(vente.montant_paye)}
+                                </td>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap text-sm font-semibold text-red-500 border-r border-gray-200">
+                                  {formatPrice(reste)}
+                                </td>
+                                <td rowSpan={vente.vente_items.length} className="px-3 sm:px-6 py-4 whitespace-nowrap border-r border-gray-200">
+                                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getSaleStatusColor(vente.statut_paiement)}`}>
+                                    {getSaleStatusLabel(vente.statut_paiement)}
+                                  </span>
+                                </td>
+                              </>
+                            )}
+
+                            {/* Actions (par article) */}
+                            <td className="px-3 sm:px-6 py-4 whitespace-nowrap text-center text-lg font-medium">
+                              {/* Paiement : une seule fois par vente (1ʳᵉ ligne) si reste > 0 */}
+                              {index === 0 && reste > 0 && (
+                                <button
+                                  onClick={() => handlePaiementClick(vente)}
+                                  className="text-green-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200 mr-2"
+                                  title="Gérer le paiement"
+                                >
+                                  <FaMoneyBillWave />
+                                </button>
+                              )}
+
+                              {/* Pour chaque article : Annuler / Retourner tant que l’article n’est ni annulé ni retourné */}
+                              {item.statut_vente_item === 'annulé' ? (
+                                <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('annulé')}`}>{getItemStatusLabel('annulé')}</span>
+                              ) : item.statut_vente_item === 'retourné' ? (
+                                <span className={`px-2 py-1 text-xs rounded-full ${getItemStatusColor('retourné')}`}>{getItemStatusLabel('retourné')}</span>
+                              ) : (
+                                <>
+                                  <button
+                                    onClick={() => handleAnnulationClick(item.id)}
+                                    className="text-red-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200 mr-2"
+                                    title="Annuler le produit"
+                                  >
+                                    <FaTimes />
+                                  </button>
+                                  <button
+                                    onClick={() => handleRetourClick(item.id)}
+                                    className="text-yellow-600 hover:bg-gray-100 p-2 rounded-full transition-colors duration-200"
+                                    title="Retourner le produit"
+                                  >
+                                    <FaSyncAlt />
+                                  </button>
+                                </>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </React.Fragment>
+                  ))}
+                </tbody>
               </table>
             </div>
           )}
@@ -443,13 +434,14 @@ const Sorties = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Annuler un Produit</h3>
+                <h3 className="text-xl font-bold">Annuler le produit</h3>
                 <button onClick={() => setShowCancelModal(false)} className="text-gray-500 hover:text-gray-800">
                   <FaTimes />
                 </button>
               </div>
-              <p className="mb-4">Êtes-vous sûr de vouloir annuler ce produit de la vente ?</p>
-              <textarea
+              <label className="block text-sm text-gray-700 mb-2">Raison</label>
+              <input
+                type="text"
                 value={raisonAnnulation}
                 onChange={(e) => setRaisonAnnulation(e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl mb-4"
@@ -460,7 +452,7 @@ const Sorties = () => {
                 className="w-full bg-red-500 text-white font-semibold py-2 rounded-xl hover:bg-red-600 flex items-center justify-center"
                 disabled={isSubmitting}
               >
-                {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : "Confirmer l'annulation"}
+                {isSubmitting ? <FaSpinner className="animate-spin mr-2" /> : 'Confirmer l’annulation'}
               </button>
             </div>
           </div>
@@ -471,26 +463,27 @@ const Sorties = () => {
           <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
             <div className="bg-white p-4 sm:p-8 rounded-xl shadow-lg w-full max-w-sm mx-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold">Retourner un Mobile</h3>
+                <h3 className="text-xl font-bold">Retour défectueux</h3>
                 <button onClick={() => setShowReturnModal(false)} className="text-gray-500 hover:text-gray-800">
                   <FaTimes />
                 </button>
               </div>
-              <p className="mb-4">Renseignez les informations pour le retour.</p>
+              <label className="block text-sm text-gray-700 mb-1">Raison</label>
               <input
                 type="text"
                 value={raisonRetour}
                 onChange={(e) => setRaisonRetour(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl mb-4"
-                placeholder="Raison du retour"
+                className="w-full px-4 py-2 border rounded-xl mb-3"
+                placeholder="Motif du retour"
               />
+              <label className="block text-sm text-gray-700 mb-1">Quantité retournée</label>
               <input
                 type="number"
+                min="1"
                 value={quantiteRetour}
                 onChange={(e) => setQuantiteRetour(e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl mb-4"
-                placeholder="Quantité retournée"
-                min="1"
+                placeholder="Quantité"
               />
               <button
                 onClick={handleRetourSubmit}
