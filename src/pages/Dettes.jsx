@@ -95,8 +95,7 @@ const Dettes = () => {
         </head>
         <body>
           <div class="print-header">
-            <h1>LISTE LABAN SERVICE</h1>
-            <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
+            <h1>LISTE DES DETTES WASSOLO SERVICES</h1> <p>Date: ${new Date().toLocaleDateString('fr-FR')}</p>
           </div>
           <div>${content}</div>
           <script>
@@ -130,7 +129,7 @@ const Dettes = () => {
             </h2>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-4 items-start sm:items-center">
               <span className="text-sm font-semibold">
-                Total restant à payer : <span className="text-red-500">{formatPrice(totalDues)} FCFA</span>
+                Total des dettes : <span className="text-red-500">{formatPrice(totalDues)} FCFA</span>
               </span>
               <button onClick={handlePrint} className="px-4 py-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition flex items-center">
                 <FaPrint className="mr-2" /> Imprimer la liste
