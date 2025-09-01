@@ -37,7 +37,8 @@ const Retours = () => {
     setError('');
     try {
       const token = localStorage.getItem('token');
-      const { data } = await axios.get(`${API_URL}/api/returns`, {
+      // Ligne corrigée : utilisation de la bonne URL
+      const { data } = await axios.get(`${API_URL}/api/defective-returns`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setRetours(Array.isArray(data) ? data : []);
