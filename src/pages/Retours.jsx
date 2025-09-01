@@ -1,37 +1,32 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { FaSpinner } from 'react-icons/fa'; // Seul FaSpinner est nécessaire ici, et nous allons le remplacer si besoin
 
 const Retours = () => {
-  // états existants
   const [retours, setRetours] = useState([]);
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // nouveaux états UI (sélection + envoi fournisseur)
   const [selection, setSelection] = useState(new Set());
   const [recherche, setRecherche] = useState('');
   const [clientFiltre, setClientFiltre] = useState('');
   const [dateEnvoi, setDateEnvoi] = useState(() => {
     const d = new Date();
     d.setSeconds(0, 0);
-    return d.toISOString().slice(0, 16); // yyyy-MM-ddTHH:mm
+    return d.toISOString().slice(0, 16);
   });
   const [numeroDossier, setNumeroDossier] = useState('');
   const [observation, setObservation] = useState('');
   const [messageSucces, setMessageSucces] = useState('');
 
-  // Utilisation de la variable d'environnement (méthode alternative pour éviter l'erreur)
-  const API_URL = 'http://localhost:3000';
+  // Remplacez cette URL par l'URL publique de votre serveur backend déployé
+  const API_URL = 'http://localhost:3000'; // À remplacer par l'URL publique !
 
-  // ====== utilitaires d'affichage ======
   const formatDate = (v) =>
     v ? new Date(v).toLocaleDateString('fr-FR') : '';
   const formatHeure = (v) =>
     v ? new Date(v).toLocaleTimeString('fr-FR', { hour12: false }) : '';
 
-  // ====== logique de récupération de données ======
   useEffect(() => {
     const fetchRetoursEtClients = async () => {
       setIsLoading(true);
@@ -54,7 +49,6 @@ const Retours = () => {
     fetchRetoursEtClients();
   }, [API_URL]);
 
-  // ====== logique d'interaction UI ======
   const basculerSelection = (id) => {
     const newSelection = new Set(selection);
     if (newSelection.has(id)) {
@@ -66,7 +60,6 @@ const Retours = () => {
   };
 
   const gererEnvoiFournisseur = async () => {
-    // Remplacer alert() par une gestion de l'UI
     if (selection.size === 0) {
       setError('Veuillez sélectionner au moins un retour à envoyer.');
       return;
@@ -86,8 +79,7 @@ const Retours = () => {
     try {
       await axios.post(`${API_URL}/api/retours-fournisseurs`, payload);
       setMessageSucces('Retours envoyés au fournisseur avec succès !');
-      setSelection(new Set()); // Réinitialise la sélection
-      // Recharge les retours pour mettre à jour la liste
+      setSelection(new Set());
       const retoursRes = await axios.get(`${API_URL}/api/defective_returns`);
       setRetours(retoursRes.data);
     } catch (err) {
@@ -100,7 +92,6 @@ const Retours = () => {
     }
   };
 
-  // ====== filtres et recherche ======
   const retoursFiltres = useMemo(() => {
     let resultats = retours.filter((r) => r.status === 'en_attente');
     if (recherche) {
@@ -118,7 +109,6 @@ const Retours = () => {
     return resultats;
   }, [retours, recherche, clientFiltre]);
 
-  // ====== rendu du composant ======
   return (
     <div className="p-4 sm:p-6 bg-gray-50 min-h-screen font-sans">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">
@@ -128,7 +118,6 @@ const Retours = () => {
         Sélectionnez les articles à retourner aux fournisseurs.
       </p>
 
-      {/* Affichage des messages */}
       {error && (
         <div
           className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-4 rounded-md shadow-sm"
@@ -146,7 +135,6 @@ const Retours = () => {
         </div>
       )}
 
-      {/* Section d'envoi au fournisseur */}
       <div className="bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Envoyer la sélection aux fournisseurs
@@ -200,7 +188,10 @@ const Retours = () => {
           >
             {isLoading ? (
               <>
-                <FaSpinner className="animate-spin inline-block mr-2 text-xl" /> Envoi en cours...
+                <svg className="animate-spin inline-block mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg> Envoi en cours...
               </>
             ) : (
               `Envoyer ${selection.size} article(s) au fournisseur`
@@ -209,7 +200,6 @@ const Retours = () => {
         </div>
       </div>
 
-      {/* Filtres et recherche */}
       <div className="bg-white p-6 rounded-xl shadow-md mb-6 border border-gray-200">
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
           Liste des retours en attente
@@ -236,10 +226,12 @@ const Retours = () => {
           </select>
         </div>
 
-        {/* Affichage des données */}
         {isLoading && (
           <div className="text-center py-12 text-gray-500">
-            <FaSpinner className="animate-spin mx-auto text-4xl text-indigo-500" />
+            <svg className="animate-spin mx-auto h-12 w-12 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
             <p className="mt-4 text-lg">Chargement des retours...</p>
           </div>
         )}
