@@ -2,6 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { FaPlus, FaTrash, FaDownload, FaPrint, FaMoneyBillWave, FaTimes } from 'react-icons/fa';
 
+// Spinner Icon pour le chargement (un simple SVG pour ne pas ajouter de dépendance)
+const Spinner = () => (
+  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
+
+
 const argent = (n) =>
   new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(Number(n || 0));
 
@@ -14,6 +23,7 @@ export default function Factures() {
   const [factures, setFactures] = useState([]);
 
   const [chargement, setChargement] = useState(false);
+  const [chargementPDF, setChargementPDF] = useState(null); // AJOUT: État pour le chargement du PDF (par ID)
   const [message, setMessage] = useState({ type: '', texte: '' });
 
   // création facture
@@ -158,23 +168,33 @@ export default function Factures() {
   };
 
   // ---- actions liste : imprimer / payer / annuler ----
+
+  // ====================== MODIFICATION ICI ======================
   const imprimerFacture = async (facture) => {
+    setChargementPDF(facture.id); // Démarre le loading pour ce bouton
+    setMessage({ type: '', texte: '' }); // Nettoie les anciens messages
     try {
       const url = `${API_URL}/api/factures/${facture.id}/pdf`;
       const res = await axios.get(url, { headers, responseType: 'blob' });
+      
       const blob = new Blob([res.data], { type: 'application/pdf' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `facture-${facture.numero_facture}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
+      const pdfUrl = URL.createObjectURL(blob);
+
+      // Ouvre le PDF dans un nouvel onglet, ce qui résout le problème de navigation
+      window.open(pdfUrl, '_blank');
+      
+      // Il n'est pas toujours sûr de révoquer l'URL immédiatement, 
+      // le navigateur s'en chargera à la fermeture de l'onglet.
+
     } catch (e) {
       console.error(e);
       setMessage({ type: 'erreur', texte: "Impossible de générer le PDF." });
+    } finally {
+      setChargementPDF(null); // Arrête le loading
     }
   };
+  // ==================== FIN DE LA MODIFICATION ====================
+
 
   const ouvrirPaiement = (factureId) => {
     setEditionPaiementId(factureId);
@@ -201,6 +221,8 @@ export default function Factures() {
   };
 
   const annulerFacture = async (facture) => {
+    // Remplacer window.confirm par une modale "Apple-like" serait idéal ici.
+    // Pour l'instant, on garde la logique de confirmation.
     const ok = window.confirm(`Annuler la facture ${facture.numero_facture} ?\nTous les mobiles seront remis en stock.`);
     if (!ok) return;
     try {
@@ -358,16 +380,19 @@ export default function Factures() {
               <button
                 onClick={creerFacture}
                 disabled={chargement || erreursCreation.length > 0 || lignes.length === 0 || !clientId}
-                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60"
+                className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 inline-flex items-center"
               >
+                {chargement && <Spinner />}
                 {chargement ? 'Création…' : 'Créer la facture'}
               </button>
               {factureCree && (
                 <button
                   onClick={() => imprimerFacture(factureCree)}
-                  className="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900 inline-flex items-center gap-2"
+                  disabled={chargementPDF === factureCree.id}
+                  className="px-4 py-2 rounded-lg bg-gray-800 text-white hover:bg-gray-900 inline-flex items-center disabled:opacity-60"
                 >
-                  <FaDownload /> PDF
+                  {chargementPDF === factureCree.id ? <Spinner/> : <FaDownload />} 
+                  <span className="ml-2">PDF</span>
                 </button>
               )}
             </div>
@@ -421,8 +446,13 @@ export default function Factures() {
                     </td>
                     <td className="px-3 py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => imprimerFacture(f)} className="px-3 py-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-800" title="Imprimer">
-                          <FaPrint />
+                        <button 
+                          onClick={() => imprimerFacture(f)} 
+                          className="px-3 py-1.5 rounded-lg bg-gray-700 text-white hover:bg-gray-800 inline-flex items-center disabled:opacity-60" 
+                          title="Imprimer"
+                          disabled={chargementPDF === f.id}
+                        >
+                          {chargementPDF === f.id ? <Spinner/> : <FaPrint />}
                         </button>
                         {f.statut_facture !== 'annulee' && (
                           <button onClick={() => ouvrirPaiement(f.id)} className="px-3 py-1.5 rounded-lg bg-blue-600 text-white hover:bg-blue-700" title="Gérer le paiement">
