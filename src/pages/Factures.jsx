@@ -168,11 +168,10 @@ export default function Factures() {
   };
 
   // ---- actions liste : imprimer / payer / annuler ----
-
-  // ====================== MODIFICATION ICI ======================
+// ====================== MODIFICATION POUR SAFARI ======================
   const imprimerFacture = async (facture) => {
-    setChargementPDF(facture.id); // Démarre le loading pour ce bouton
-    setMessage({ type: '', texte: '' }); // Nettoie les anciens messages
+    setChargementPDF(facture.id);
+    setMessage({ type: '', texte: '' });
     try {
       const url = `${API_URL}/api/factures/${facture.id}/pdf`;
       const res = await axios.get(url, { headers, responseType: 'blob' });
@@ -180,21 +179,27 @@ export default function Factures() {
       const blob = new Blob([res.data], { type: 'application/pdf' });
       const pdfUrl = URL.createObjectURL(blob);
 
-      // Ouvre le PDF dans un nouvel onglet, ce qui résout le problème de navigation
-      window.open(pdfUrl, '_blank');
-      
-      // Il n'est pas toujours sûr de révoquer l'URL immédiatement, 
-      // le navigateur s'en chargera à la fermeture de l'onglet.
+      // Créer une ancre invisible pour déclencher l'ouverture
+      const a = document.createElement('a');
+      a.href = pdfUrl;
+      a.target = '_blank'; // Important: Indique d'ouvrir dans un nouvel onglet
+      a.style.display = 'none'; // Rendre l'élément invisible
+
+      document.body.appendChild(a); // L'ajouter au corps du document pour que le clic fonctionne
+      a.click(); // Simuler le clic
+      document.body.removeChild(a); // Nettoyer en le retirant du document
+
+      // Pas besoin de révoquer l'URL immédiatement pour laisser le temps au nouvel onglet de charger
+      // URL.revokeObjectURL(pdfUrl);
 
     } catch (e) {
       console.error(e);
       setMessage({ type: 'erreur', texte: "Impossible de générer le PDF." });
     } finally {
-      setChargementPDF(null); // Arrête le loading
+      setChargementPDF(null);
     }
   };
   // ==================== FIN DE LA MODIFICATION ====================
-
 
   const ouvrirPaiement = (factureId) => {
     setEditionPaiementId(factureId);
