@@ -328,7 +328,7 @@ export default function Factures() {
               <thead className="bg-gray-100 text-gray-600"><tr>
                 <th className="px-3 py-2 text-left">Produit</th>
                 <th className="px-3 py-2 text-center">Qté</th>
-                <th className="px-3 py-2 text-right">Prix (u)</th>
+                <th className="px-3 py-2 text-right">Prix Unitaire</th>
                 <th className="px-3 py-2 text-right">Total</th>
                 <th className="px-3 py-2"></th>
               </tr></thead>

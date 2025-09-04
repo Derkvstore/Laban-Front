@@ -19,6 +19,44 @@ const MODELES = {
 };
 const STOCKAGES = ["64 Go", "128 Go", "256 Go", "512 Go", "1 To"];
 
+// Composant pour le spinner de chargement
+const Spinner = () => (
+  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
+
+// Composant pour la boîte de dialogue Apple-like
+const AppleLikeDialog = ({ isOpen, onConfirm, onCancel, title, message, children }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50 transition-opacity duration-300">
+      <div className="bg-white rounded-xl shadow-2xl p-6 max-w-sm w-full transform transition-all duration-300 scale-95 opacity-0 animate-scaleIn">
+        <h3 className="text-xl font-bold text-gray-800 mb-2">{title}</h3>
+        <p className="text-sm text-gray-500 mb-4">{message}</p>
+        <div className="mb-4">{children}</div>
+        <div className="flex justify-end space-x-3">
+          <button
+            onClick={onCancel}
+            className="px-4 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors duration-200"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={onConfirm}
+            className="px-4 py-2 text-sm font-semibold text-white bg-blue-500 rounded-lg hover:bg-blue-600 transition-colors duration-200"
+          >
+            Confirmer
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 const Produits = () => {
   const [products, setProducts] = useState([]);
   const [fournisseurs, setFournisseurs] = useState([]);
@@ -40,6 +78,13 @@ const Produits = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+
+  // Nouvel état pour la modale d'ajout de quantité
+  const [isAddingQuantity, setIsAddingQuantity] = useState(false);
+  const [productToUpdate, setProductToUpdate] = useState(null);
+  const [quantityToAdd, setQuantityToAdd] = useState('');
+  const [newSupplier, setNewSupplier] = useState('');
+
 
   // suggestions dynamiques
   const [suggestionsMarques, setSuggestionsMarques] = useState([]);
@@ -119,9 +164,48 @@ const Produits = () => {
     const formattedValue = formatPrice(rawValue);
     setFormData({ ...formData, [name]: formattedValue });
   };
-
-  const handleSubmit = async (e) => {
+  
+  // Fonction pour vérifier l'existence du produit avant de soumettre
+  const checkAndSubmit = async (e) => {
     e.preventDefault();
+    setIsFormLoading(true);
+    setError('');
+    setSuccess('');
+
+    // Si on est en mode édition, on soumet directement
+    if (editingProduct) {
+      handleSubmit();
+      return;
+    }
+
+    const { marque, modele, stockage, type, quantite_en_stock } = formData;
+    const cleanedFormData = {
+      ...formData,
+      prix_achat: parsePrice(formData.prix_achat),
+      prix_vente_suggere: parsePrice(formData.prix_vente_suggere),
+    };
+    
+    // Vérifier si un produit similaire existe déjà
+    const existingProduct = products.find(p => 
+      p.marque.toLowerCase() === marque.toLowerCase() &&
+      p.modele.toLowerCase() === modele.toLowerCase() &&
+      p.stockage.toLowerCase() === stockage.toLowerCase() &&
+      p.type.toLowerCase() === type.toLowerCase()
+    );
+
+    if (existingProduct) {
+      setProductToUpdate(existingProduct);
+      setQuantityToAdd(quantite_en_stock);
+      setNewSupplier(formData.fournisseur_id);
+      setIsAddingQuantity(true);
+      setIsFormLoading(false);
+    } else {
+      // Sinon, on procède à la création
+      handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
     setIsFormLoading(true);
     setError('');
     setSuccess('');
@@ -148,11 +232,7 @@ const Produits = () => {
       await axios({ method, url, data: cleanedFormData, headers: { 'Authorization': `Bearer ${token}` } });
       fetchProducts();
       setSuccess(`Produit ${editingProduct ? 'modifié' : 'ajouté'} avec succès !`);
-      setFormData({
-        marque: '', modele: '', stockage: '', type: '', quantite_en_stock: '',
-        prix_achat: '', prix_vente_suggere: '', fournisseur_id: '', type_carton: '',
-      });
-      setEditingProduct(null);
+      resetForm();
     } catch (err) {
       setError("Erreur lors de l'enregistrement du produit.");
       console.error(err);
@@ -160,6 +240,43 @@ const Produits = () => {
       setIsFormLoading(false);
     }
   };
+
+  const resetForm = () => {
+    setFormData({
+      marque: '', modele: '', stockage: '', type: '', quantite_en_stock: '',
+      prix_achat: '', prix_vente_suggere: '', fournisseur_id: '', type_carton: '',
+    });
+    setEditingProduct(null);
+  }
+
+  // Fonction pour confirmer l'ajout de quantité
+  const handleConfirmAddQuantity = async () => {
+    setIsFormLoading(true);
+    setError('');
+    setSuccess('');
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`${API_URL}/api/products/${productToUpdate.id}/add-quantity`, {
+        quantite_ajoutee: Number(quantityToAdd),
+        fournisseur_id: Number(newSupplier)
+      }, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      fetchProducts();
+      setSuccess(`Quantité ajoutée avec succès au produit ${productToUpdate.marque} ${productToUpdate.modele}!`);
+      resetForm();
+    } catch (err) {
+      setError("Erreur lors de l'ajout de la quantité.");
+      console.error(err);
+    } finally {
+      setIsAddingQuantity(false);
+      setProductToUpdate(null);
+      setQuantityToAdd('');
+      setNewSupplier('');
+      setIsFormLoading(false);
+    }
+  };
+
 
   const handleEdit = (product) => {
     setEditingProduct(product);
@@ -219,10 +336,10 @@ const Produits = () => {
       <div className="w-full max-w-6xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-4 sm:mb-6 text-gray-900">Gestion des Produits</h1>
 
-        {/* Formulaire d'ajout/édition (inchangé dans sa logique) */}
+        {/* Formulaire d'ajout/édition */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg mb-6 sm:mb-8">
           <h2 className="text-lg sm:text-xl font-semibold mb-4 text-gray-800">{editingProduct ? 'Modifier un produit' : 'Ajouter un nouveau produit'}</h2>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={checkAndSubmit}>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
               <input list="marques" type="text" name="marque" placeholder="Marque" value={formData.marque} onChange={handleChange}
                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200" required />
@@ -277,19 +394,13 @@ const Produits = () => {
                 className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-200 flex items-center justify-center"
                 disabled={isFormLoading}
               >
-                {isFormLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaPlus className="mr-2" />}
+                {isFormLoading ? <Spinner /> : <FaPlus className="mr-2" />}
                 {editingProduct ? 'Modifier le produit' : 'Ajouter le produit'}
               </button>
               {editingProduct && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setFormData({
-                      marque: '', modele: '', stockage: '', type: '', quantite_en_stock: '',
-                      prix_achat: '', prix_vente_suggere: '', fournisseur_id: '', type_carton: '',
-                    });
-                  }}
+                  onClick={resetForm}
                   className="ml-4 px-6 py-3 bg-gray-400 text-white font-semibold rounded-xl hover:bg-gray-500 transition duration-200"
                 >
                   Annuler
@@ -367,6 +478,29 @@ const Produits = () => {
           </div>
         </div>
       )}
+
+      {/* Modale Apple-like pour ajouter une quantité */}
+      <AppleLikeDialog
+        isOpen={isAddingQuantity}
+        onConfirm={handleConfirmAddQuantity}
+        onCancel={() => setIsAddingQuantity(false)}
+        title="Ajouter au stock existant ?"
+        message={`Un produit similaire existe déjà : ${productToUpdate?.marque} ${productToUpdate?.modele} (${productToUpdate?.quantite_en_stock} pcs). Souhaitez-vous ajouter la nouvelle quantité de ${quantityToAdd} pcs ?`}
+      >
+        <div className="space-y-3">
+          <p className="text-sm font-medium text-gray-700">Fournisseur de la nouvelle quantité :</p>
+          <select
+            value={newSupplier}
+            onChange={(e) => setNewSupplier(e.target.value)}
+            className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Sélectionner un fournisseur</option>
+            {fournisseurs.map(f => (
+              <option key={f.id} value={f.id}>{f.nom}</option>
+            ))}
+          </select>
+        </div>
+      </AppleLikeDialog>
     </div>
   );
 };
